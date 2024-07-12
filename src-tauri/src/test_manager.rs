@@ -1,42 +1,20 @@
 pub mod mos;
-use crate::test_manager::mos::MOSManager;
 
+use anyhow::Result;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
-use serde::{Deserialize, Serialize};
+//===================================================
+// struct that implement this trait behave as TestManager
+// TestManager controls(launch and close) each Trial
+#[allow(dead_code)]
+pub trait TestManager{
+    fn delete(&self);
+    fn launch_trial(&mut self, participant_name: String) -> Result<()>;
+    fn get_question(&self) -> Result<PathBuf>;
+    fn set_answer(&mut self, rate: Vec<isize>) -> Result<()>;
+    fn close_trial(&mut self) -> Result<()>;
 
-#[derive(Serialize, Deserialize)]
-pub enum TestType {
-    MOS,
-    DMOS,
-}
-
-#[derive(Debug)]
-pub enum TestManager {
-    MOS(MOSManager),
-}
-
-impl TestManager {
-    pub fn from_json(test_setting_path: PathBuf, test_type: TestType) -> Result<TestManager> {
-        return match test_type {
-            TestType::MOS => {
-                let manager = MOSManager::from_json(test_setting_path)?;
-                Ok(TestManager::MOS(manager))
-            }
-            _ => Err(anyhow!("Not implment")),
-        };
-    }
-
-    pub fn new<S: AsRef<str>>(app_data_root: PathBuf, test_type: TestType, mut json_string_from_frontend: S) -> Result<TestManager> {
-        let json_string_from_frontend = json_string_from_frontend.as_ref().to_string();
-
-        return match test_type {
-            TestType::MOS => {
-                let manager = MOSManager::setup(app_data_root, json_string_from_frontend)?;
-                Ok(TestManager::MOS(manager))
-            }
-            _ => Err(anyhow!("Not implment")),
-        };
-    }
+    //====================================================================
+    fn copy_categories(&self) -> Result<()>;
+    fn save_setting(&self) -> Result<()>;
 }

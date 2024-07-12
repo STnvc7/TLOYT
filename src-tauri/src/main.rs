@@ -51,7 +51,7 @@ fn main() -> Result<()> {
     }"#;
 
     let mut app_manager =
-        ApplicationManager::new(PathBuf::from("C:\\Users\\hiroh\\AppData\\Roaming\\TLOYT"))?;
+        ApplicationManager::setup(PathBuf::from("C:\\Users\\hiroh\\AppData\\Roaming\\TLOYT"))?;
 
     // println!("{:?}", app_manager);
     // let mut manager = MOSManager::setup(
