@@ -1,20 +1,19 @@
 pub mod mos;
 
-use crate::test_core::Category;
-
 use anyhow::Result;
 use std::path::PathBuf;
 
+#[derive(Debug)]
+pub enum TrialStatus {
+    Doing,
+    Done,
+}
+
 #[allow(dead_code)]
-pub trait TestTrial<T> {
-    fn generate(
-        manager_data_root: PathBuf,
-        participant_name: String,
-        categories: Vec<Category>,
-        num_repeat: usize,
-    ) -> Result<T>;
-    fn get_question(&self) -> PathBuf;
-    fn set_answer(&mut self, rate: Vec<isize>);
-    fn to_next(&mut self);
+pub trait TestTrial {
+    fn get_examinee(&self) -> String;
+    fn get_audio(&self) -> PathBuf;
+    fn set_score(&mut self, score: Vec<isize>);
+    fn to_next(&mut self) -> TrialStatus;
     fn close(&self) -> Result<()>;
 }

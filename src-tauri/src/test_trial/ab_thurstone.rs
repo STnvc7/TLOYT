@@ -17,47 +17,51 @@ pub enum TargetType {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MOSScore {
-    category: String,
-    target_type: TargetType,
-    audio_file_path: PathBuf,
-    score: Option<isize>,
+pub struct ABThurstoneScore {
+    category_A: String,
+    audio_file_path_A: PathBuf,
+    category_B: String,
+    audio_file_path_B: PathBuf,
+    prefer_to: Option<String>,
 }
-impl MOSScore {
-    pub fn new(category: String, target_type: TargetType, audio_file_path: PathBuf) -> MOSScore {
-        MOSScore {
+impl ABThurstoneScore {
+    pub fn new(category: String, target_type: TargetType, audio_file_path: PathBuf) -> ABThurstoneScore {
+        ABThurstoneScore {
             category: category,
             target_type: target_type,
             audio_file_path: audio_file_path,
-            score: None,
+            rate: None,
         }
     }
-    pub fn get_audio_file_path(&self) -> PathBuf {
-        self.audio_file_path.clone()
+    pub fn get_audio_file_path_A(&self) -> PathBuf {
+        self.audio_file_path_A.clone()
     }
-    pub fn set_score(&mut self, score: isize) {
-        self.score = Some(score);
+    pub fn get_audio_file_path_B(&self) -> PathBuf {
+        self.audio_file_path_B.clone()
+    }
+    pub fn set_score(&mut self, rate: isize) {
+        self.rate = Some(rate);
     }
 }
 
 #[allow(unused_variables)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MOSTrial {
+pub struct ABThurstoneTrial {
     trial_data_root: PathBuf,
     examinee: String,
-    score_list: Vec<MOSScore>,
+    score_list: Vec<ABThurstoneScore>,
     current_idx: usize,
 }
 
-impl TestTrial for MOSTrial {
+impl TestTrial for ABThurstoneTrial {
     fn get_examinee(&self) -> String {
         self.examinee.clone()
     }
     fn get_audio(&self) -> PathBuf {
         self.score_list[self.current_idx].get_audio_file_path()
     }
-    fn set_score(&mut self, score: Vec<isize>) {
-        self.score_list[self.current_idx].set_score(score[0]);
+    fn set_answer(&mut self, rate: Vec<isize>) {
+        self.score_list[self.current_idx].set_rate(rate[0]);
     }
     fn to_next(&mut self) -> TrialStatus{
         if self.score_list.len() > (self.current_idx + 1) {
@@ -77,18 +81,18 @@ impl TestTrial for MOSTrial {
     }
 }
 
-impl MOSTrial {
+impl ABThurstoneTrial {
     pub fn generate(
         manager_data_root: PathBuf,
         examinee: String,
         categories: Vec<Category>,
         num_repeat: usize,
-    ) -> Result<MOSTrial> {
-        let trial_data_root = MOSTrial::get_trial_data_root(manager_data_root.clone())?;
+    ) -> Result<ABThurstoneTrial> {
+        let trial_data_root = ABThurstoneTrial::get_trial_data_root(manager_data_root.clone())?;
         let score_list =
-            MOSTrial::generate_score_list(trial_data_root.clone(), categories, num_repeat)?;
+            ABThurstoneTrial::generate_score_list(trial_data_root.clone(), categories, num_repeat)?;
 
-        Ok(MOSTrial {
+        Ok(ABThurstoneTrial {
             trial_data_root: trial_data_root,
             examinee: examinee,
             score_list: score_list,
@@ -100,9 +104,9 @@ impl MOSTrial {
         trial_data_root: PathBuf,
         categories: Vec<Category>,
         num_repeat: usize,
-    ) -> Result<Vec<MOSScore>> {
-        let mut dummy_list: Vec<MOSScore> = Vec::new();
-        let mut file_list: Vec<MOSScore> = Vec::new();
+    ) -> Result<Vec<ABThurstoneScore>> {
+        let mut dummy_list: Vec<ABThurstoneScore> = Vec::new();
+        let mut file_list: Vec<ABThurstoneScore> = Vec::new();
 
         for category in &categories {
             let category_name = category.get_category_name();
@@ -113,14 +117,14 @@ impl MOSTrial {
             let dummy_file = &audio_files.choose(&mut rand::thread_rng()).unwrap();
             let dummy_file_path = category_dir.join(dummy_file);
             let dummy =
-                MOSScore::new(category_name.clone(), TargetType::Dummy, dummy_file_path);
+                ABThurstoneScore::new(category_name.clone(), TargetType::Dummy, dummy_file_path);
             dummy_list.push(dummy);
 
             for _ in 0..num_repeat {
                 for audio_file in &audio_files {
                     let audio_file_path = category_dir.join(audio_file);
                     let score =
-                        MOSScore::new(category_name.clone(), TargetType::Valid, audio_file_path);
+                        ABThurstoneScore::new(category_name.clone(), TargetType::Valid, audio_file_path);
                     file_list.push(score);
                 }
             }

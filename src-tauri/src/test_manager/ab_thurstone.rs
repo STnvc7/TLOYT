@@ -1,6 +1,6 @@
 use crate::constants::{CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME};
 use crate::test_manager::{TestManager, ParticipantStatus, Category};
-use crate::test_trial::{mos::MOSTrial, TestTrial, TrialStatus};
+// use crate::test_trial::{ab_thurstone::ABThurstoneTrial, TestTrial, TrialStatus};
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -28,7 +28,7 @@ struct SetupInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MOSManager {
+pub struct ABThurstoneManager {
     manager_data_root: PathBuf,
     name: String,
     author: String,
@@ -45,7 +45,7 @@ pub struct MOSManager {
 }
 
 #[allow(dead_code)]
-impl TestManager for MOSManager {
+impl TestManager for ABThurstoneManager {
     fn get_name(&self) -> String {
         self.name.clone()
     }
@@ -55,7 +55,7 @@ impl TestManager for MOSManager {
         if self.active_trial.is_some() {
             return Err(anyhow!("There is other active trial"));
         }
-        let new_trial = MOSTrial::generate(
+        let new_trial = ABThrustoneTrial::generate(
             self.manager_data_root.clone(),
             participant_name,
             self.categories.clone(),
@@ -74,10 +74,10 @@ impl TestManager for MOSManager {
         };
         Ok(path)
     }
-    fn set_score(&mut self, score: Vec<isize>) -> Result<TrialStatus> {
+    fn set_answer(&mut self, rate: Vec<isize>) -> Result<TrialStatus> {
         match self.active_trial.as_mut() {
             Some(trial) => {
-                trial.set_score(score);
+                trial.set_answer(rate);
                 let status = trial.to_next();
                 return Ok(status)
             }
@@ -129,7 +129,7 @@ impl TestManager for MOSManager {
     }
 }
 
-impl MOSManager {
+impl ABThurstoneManager {
     fn new(
         manager_data_root: PathBuf,
         name: String,
@@ -140,8 +140,8 @@ impl MOSManager {
         participants: HashMap<String, ParticipantStatus>,
         time_limit: usize,
         num_repeat: usize,
-    ) -> MOSManager {
-        MOSManager {
+    ) -> ABThurstoneManager {
+        ABThurstoneManager {
             manager_data_root: manager_data_root,
             name: name,
             author: author,
@@ -155,24 +155,24 @@ impl MOSManager {
         }
     }
 
-    pub fn from_json<P: AsRef<Path>>(path_to_test_config: P) -> Result<MOSManager> {
+    pub fn from_json<P: AsRef<Path>>(path_to_test_config: P) -> Result<ABThurstoneManager> {
         let json_string = fs::read_to_string(path_to_test_config.as_ref())?;
-        let this_test: MOSManager = serde_json::from_str(&json_string)?;
+        let this_test: ABThurstoneManager = serde_json::from_str(&json_string)?;
         return Ok(this_test);
     }
 
     pub fn setup<P: AsRef<Path>, S: AsRef<str>>(
         app_data_root: P,
         json_string: S,
-    ) -> Result<MOSManager> {
+    ) -> Result<ABThurstoneManager> {
         let info: SetupInfo = serde_json::from_str(json_string.as_ref())?;
         let manager_data_root =
-            MOSManager::get_manager_data_root(app_data_root.as_ref(), &info.name)?;
+            ABThurstoneManager::get_manager_data_root(app_data_root.as_ref(), &info.name)?;
         let created_date = Local::now().date_naive();
-        let participants = MOSManager::setup_participants(info.participants);
-        let categories = MOSManager::setup_categories(info.categories)?;
+        let participants = ABThursstoneManager::setup_participants(info.participants);
+        let categories = ABThurstoneManager::setup_categories(info.categories)?;
 
-        return Ok(MOSManager::new(
+        return Ok(ABThurstoneManager::new(
             manager_data_root,
             info.name,
             info.author,

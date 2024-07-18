@@ -14,55 +14,55 @@
 //         .expect("error while running tauri application");
 // }
 
+    // let json = r#"
+    // { 
+    //     "name": "MOS_test2",
+    //     "author": "k_hiro",
+    //     "description": "Subjective Test for SSW",
+    //     "participants": ["n_ichi", "m_oka"],
+    //     "categories": [
+    //         ["PCM", "C:\\Users\\hiroh\\Downloads\\PCM"],
+    //         ["Deep Performer", "C:\\Users\\hiroh\\Downloads\\DeepPerformer"]
+    //     ],
+    //     "time_limit": 5,
+    //     "num_repeat": 2
+    // }"#;
 mod app;
-mod test_core;
+mod constants;
 mod test_manager;
 mod test_trial;
 
-use crate::app::ApplicationManager;
-use crate::test_manager::mos::MOSManager;
+use crate::app::{ApplicationManager, TestType};
+use crate::test_trial::TrialStatus;
+
 use anyhow::Result;
 use std::path::PathBuf;
-
-#[allow(dead_code)]
-mod path_name {
-    pub const TEST_MANAGER_DIRNAME: &str = "test_manager";
-
-    pub const CATEGORIES_DIRNAME: &str = "categories";
-    pub const TRIAL_DIRNAME: &str = "trials";
-
-    pub const TEST_LIST_FILENAME: &str = "test_list.json";
-    pub const TEST_MANAGER_SETTING_FILENAME: &str = "setting.json";
-}
+use dialoguer::Select;
 
 fn main() -> Result<()> {
-    let json = r#"
-    { 
-        "name": "MOS_test",
-        "author": "k_hiro",
-        "description": "Subjective Test for SSW",
-        "participants": ["n_ichi", "m_oka"],
-        "categories": [
-            ["Ground Truth", "C:\\Users\\hiroh\\Downloads\\GroundTruth"],
-            ["Proposed", "C:\\Users\\hiroh\\Downloads\\Proposed"]
-        ],
-        "time_limit": 5,
-        "num_repeat": 2
-    }"#;
+    cli_test()?;
+    Ok(())
+}
 
+
+
+fn cli_test() -> Result<()> {
     let mut app_manager =
         ApplicationManager::setup(PathBuf::from("C:\\Users\\hiroh\\AppData\\Roaming\\TLOYT"))?;
+    app_manager.start_test("MOS_test".to_string(), "n_ichi".to_string())?;
 
-    // println!("{:?}", app_manager);
-    // let mut manager = MOSManager::setup(
-    //     PathBuf::from("C:\\Users\\hiroh\\AppData\\Roaming\\TLOYT"),
-    //     json,
-    // )?;
-    // manager.save_setting()?;
-    // manager.copy_categories()?;
-
-    // manager.launch_trial("n_ichi")?;
-    // manager.close_trial()?;
+    let scores = vec![1, 2, 3, 4, 5];
+    loop {
+        let file = app_manager.get_audio("MOS_test".to_string())?;
+        println!("{:?}", file);
+        let selection = Select::new().items(&scores).interact()?;
+        let status = app_manager.set_score("MOS_test".to_string(), vec![scores[selection]])?; 
+        match status {
+            TrialStatus::Done => break,
+            _ => {}
+        } 
+    }
+    app_manager.close_test("MOS_test".to_string())?;
 
     Ok(())
 }
