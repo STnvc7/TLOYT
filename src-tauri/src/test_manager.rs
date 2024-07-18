@@ -1,7 +1,7 @@
 pub mod mos;
 
-use crate::test_manager::mos::MOSManager;
 use crate::constants::AVAILABLE_AUDIO_FILE_EXTENTION;
+use crate::test_manager::mos::MOSManager;
 use crate::test_trial::TrialStatus;
 
 use anyhow::{anyhow, Result};
@@ -26,14 +26,12 @@ pub trait TestManager {
     fn save_setting(&self) -> Result<()>;
 }
 
-
 //===================================================
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ParticipantStatus {
     Yet,
     Done,
 }
-
 
 //===================================================
 // this struct is made for member of struct that implement TestManager trait.
@@ -50,14 +48,18 @@ impl Category {
         let entries = fs::read_dir(&path)?;
         for entry in entries {
             let file_path = entry?.path();
-            let file_name = file_path.file_name().unwrap().to_string_lossy().into_owned();
+            let file_name = file_path
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .into_owned();
             let period_splitted_name: Vec<&str> = file_name.split('.').collect();
 
             //有効な拡張子を持つファイルかどうか
-            for extention in AVAILABLE_AUDIO_FILE_EXTENTION{
+            for extention in AVAILABLE_AUDIO_FILE_EXTENTION {
                 if extention == *period_splitted_name.last().unwrap() {
                     audio_files.push(PathBuf::from(file_name));
-                    break
+                    break;
                 }
             }
         }

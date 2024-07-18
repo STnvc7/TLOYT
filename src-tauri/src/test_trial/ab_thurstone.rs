@@ -30,17 +30,17 @@ impl ABThurstoneScore {
             category: category,
             target_type: target_type,
             audio_file_path: audio_file_path,
-            rate: None,
+            : None,
         }
     }
-    pub fn get_audio_file_path_A(&self) -> PathBuf {
+    pub fn get_audio_file_path_a(&self) -> PathBuf {
         self.audio_file_path_A.clone()
     }
-    pub fn get_audio_file_path_B(&self) -> PathBuf {
+    pub fn get_audio_file_path_b(&self) -> PathBuf {
         self.audio_file_path_B.clone()
     }
-    pub fn set_score(&mut self, rate: isize) {
-        self.rate = Some(rate);
+    pub fn set_score(&mut self, score: String) {
+        self.prefer_to = Some(score);
     }
 }
 
@@ -51,17 +51,27 @@ pub struct ABThurstoneTrial {
     examinee: String,
     score_list: Vec<ABThurstoneScore>,
     current_idx: usize,
+    a_b_index: usize,
 }
 
 impl TestTrial for ABThurstoneTrial {
     fn get_examinee(&self) -> String {
         self.examinee.clone()
     }
-    fn get_audio(&self) -> PathBuf {
-        self.score_list[self.current_idx].get_audio_file_path()
+    fn get_audio(&mut self) -> PathBuf {
+        let audio_path = 
+        if self.a_b_index == 0 {
+            self.a_b_index = 1;
+            self.score_list[self.current_idx].get_audio_file_path_a();
+        }
+        else if self.a_b_index == 1 {
+            self.a_b_index = 0;
+            self.score_list[self.current_idx].get_audio_file_path_b();
+        }
+        return audio_path
     }
-    fn set_answer(&mut self, rate: Vec<isize>) {
-        self.score_list[self.current_idx].set_rate(rate[0]);
+    fn set_score(&mut self, score: Vec<isize>) {
+        self.score_list[self.current_idx].set_score(score[0]);
     }
     fn to_next(&mut self) -> TrialStatus{
         if self.score_list.len() > (self.current_idx + 1) {
@@ -97,6 +107,7 @@ impl ABThurstoneTrial {
             examinee: examinee,
             score_list: score_list,
             current_idx: 0,
+            a_b_index: 0,
         })
     }
 

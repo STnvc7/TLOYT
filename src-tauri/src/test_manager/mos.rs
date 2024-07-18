@@ -1,5 +1,5 @@
 use crate::constants::{CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME};
-use crate::test_manager::{TestManager, ParticipantStatus, Category};
+use crate::test_manager::{Category, ParticipantStatus, TestManager};
 use crate::test_trial::{mos::MOSTrial, TestTrial, TrialStatus};
 
 use std::collections::HashMap;
@@ -79,7 +79,7 @@ impl TestManager for MOSManager {
             Some(trial) => {
                 trial.set_score(score);
                 let status = trial.to_next();
-                return Ok(status)
+                return Ok(status);
             }
             None => {
                 return Err(anyhow!("There is no active trial"));

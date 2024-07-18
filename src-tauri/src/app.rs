@@ -24,7 +24,6 @@ pub struct ApplicationManager {
 #[allow(dead_code)]
 impl ApplicationManager {
     pub fn setup(app_data_root: PathBuf) -> Result<ApplicationManager> {
-
         let managers: HashMap<String, Box<dyn TestManager>>;
         let test_list: HashMap<String, TestType>;
 
@@ -75,7 +74,6 @@ impl ApplicationManager {
     }
 
     fn init(app_data_root: PathBuf) -> Result<()> {
-
         let test_list_path = app_data_root.join(TEST_LIST_FILENAME);
 
         let test_list: HashMap<String, TestType> = HashMap::new();
@@ -108,14 +106,17 @@ impl ApplicationManager {
         let test_list_path = self.app_data_root.join(TEST_LIST_FILENAME);
         let json_string = serde_json::to_string_pretty(&self.test_list)?;
         let mut file = File::create(test_list_path)?;
-        file.write_all(json_string.as_bytes())?;  
-        Ok(()) 
+        file.write_all(json_string.as_bytes())?;
+        Ok(())
     }
 
     /*======================================================================================
      */
     pub fn start_test(&mut self, test_name: String, participant_name: String) -> Result<()> {
-        self.managers.get_mut(&test_name).unwrap().launch_trial(participant_name)?;
+        self.managers
+            .get_mut(&test_name)
+            .unwrap()
+            .launch_trial(participant_name)?;
         Ok(())
     }
 
@@ -124,13 +125,17 @@ impl ApplicationManager {
         Ok(())
     }
 
-    pub fn get_audio(&mut self, test_name: String) -> Result<PathBuf>{
+    pub fn get_audio(&mut self, test_name: String) -> Result<PathBuf> {
         let audio_path = self.managers.get(&test_name).unwrap().get_audio()?;
         Ok(audio_path)
     }
 
-    pub fn set_score(&mut self, test_name: String, score: Vec<isize>) -> Result<TrialStatus>{
-        let status =  self.managers.get_mut(&test_name).unwrap().set_score(score)?;
+    pub fn set_score(&mut self, test_name: String, score: Vec<isize>) -> Result<TrialStatus> {
+        let status = self
+            .managers
+            .get_mut(&test_name)
+            .unwrap()
+            .set_score(score)?;
         Ok(status)
     }
 }

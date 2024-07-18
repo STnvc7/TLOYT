@@ -59,12 +59,11 @@ impl TestTrial for MOSTrial {
     fn set_score(&mut self, score: Vec<isize>) {
         self.score_list[self.current_idx].set_score(score[0]);
     }
-    fn to_next(&mut self) -> TrialStatus{
+    fn to_next(&mut self) -> TrialStatus {
         if self.score_list.len() > (self.current_idx + 1) {
             self.current_idx += 1;
             return TrialStatus::Doing;
-        }
-        else {
+        } else {
             return TrialStatus::Done;
         }
     }
@@ -112,8 +111,7 @@ impl MOSTrial {
 
             let dummy_file = &audio_files.choose(&mut rand::thread_rng()).unwrap();
             let dummy_file_path = category_dir.join(dummy_file);
-            let dummy =
-                MOSScore::new(category_name.clone(), TargetType::Dummy, dummy_file_path);
+            let dummy = MOSScore::new(category_name.clone(), TargetType::Dummy, dummy_file_path);
             dummy_list.push(dummy);
 
             for _ in 0..num_repeat {

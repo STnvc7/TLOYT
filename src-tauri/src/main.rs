@@ -14,19 +14,19 @@
 //         .expect("error while running tauri application");
 // }
 
-    // let json = r#"
-    // { 
-    //     "name": "MOS_test2",
-    //     "author": "k_hiro",
-    //     "description": "Subjective Test for SSW",
-    //     "participants": ["n_ichi", "m_oka"],
-    //     "categories": [
-    //         ["PCM", "C:\\Users\\hiroh\\Downloads\\PCM"],
-    //         ["Deep Performer", "C:\\Users\\hiroh\\Downloads\\DeepPerformer"]
-    //     ],
-    //     "time_limit": 5,
-    //     "num_repeat": 2
-    // }"#;
+// let json = r#"
+// {
+//     "name": "MOS_test2",
+//     "author": "k_hiro",
+//     "description": "Subjective Test for SSW",
+//     "participants": ["n_ichi", "m_oka"],
+//     "categories": [
+//         ["PCM", "C:\\Users\\hiroh\\Downloads\\PCM"],
+//         ["Deep Performer", "C:\\Users\\hiroh\\Downloads\\DeepPerformer"]
+//     ],
+//     "time_limit": 5,
+//     "num_repeat": 2
+// }"#;
 mod app;
 mod constants;
 mod test_manager;
@@ -36,15 +36,13 @@ use crate::app::{ApplicationManager, TestType};
 use crate::test_trial::TrialStatus;
 
 use anyhow::Result;
-use std::path::PathBuf;
 use dialoguer::Select;
+use std::path::PathBuf;
 
 fn main() -> Result<()> {
     cli_test()?;
     Ok(())
 }
-
-
 
 fn cli_test() -> Result<()> {
     let mut app_manager =
@@ -56,11 +54,11 @@ fn cli_test() -> Result<()> {
         let file = app_manager.get_audio("MOS_test".to_string())?;
         println!("{:?}", file);
         let selection = Select::new().items(&scores).interact()?;
-        let status = app_manager.set_score("MOS_test".to_string(), vec![scores[selection]])?; 
+        let status = app_manager.set_score("MOS_test".to_string(), vec![scores[selection]])?;
         match status {
             TrialStatus::Done => break,
             _ => {}
-        } 
+        }
     }
     app_manager.close_test("MOS_test".to_string())?;
 
