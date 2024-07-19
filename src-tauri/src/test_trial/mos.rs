@@ -66,7 +66,7 @@ impl TestTrial for MOSTrial {
         }
     }
     fn close(&self) -> Result<()> {
-        let json_string = serde_json::to_string_pretty(&self)?;
+        let json_string = serde_json::to_string_pretty(&self.score_list)?;
         let path = self.trial_data_root.join(format!("{}.json", self.examinee));
         let mut file = File::create(&path)?;
         file.write_all(json_string.as_bytes())?;
