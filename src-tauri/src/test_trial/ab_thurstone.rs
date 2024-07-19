@@ -1,4 +1,4 @@
-use crate::constants::{TRIAL_DIRNAME, CATEGORIES_DIRNAME};
+use crate::constants::{CATEGORIES_DIRNAME, TRIAL_DIRNAME};
 use crate::test_manager::Categories;
 use crate::test_trial::{TestTrial, TrialStatus};
 
@@ -7,12 +7,12 @@ use std::path::PathBuf;
 use std::{fs, fs::File};
 
 use anyhow::{anyhow, Result};
+use itertools::Itertools;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
-use itertools::Itertools;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-enum ABIndex{
+enum ABIndex {
     A,
     B,
 }
@@ -26,8 +26,12 @@ pub struct ABThurstoneScore {
     prefer_to: Option<String>,
 }
 impl ABThurstoneScore {
-    pub fn new(category_a: String, audio_file_path_a: PathBuf, category_b: String, audio_file_path_b: PathBuf)
-    -> ABThurstoneScore {
+    pub fn new(
+        category_a: String,
+        audio_file_path_a: PathBuf,
+        category_b: String,
+        audio_file_path_b: PathBuf,
+    ) -> ABThurstoneScore {
         ABThurstoneScore {
             category_a: category_a,
             audio_file_path_a: audio_file_path_a,
@@ -66,11 +70,10 @@ impl TestTrial for ABThurstoneTrial {
         self.examinee.clone()
     }
     fn get_audio(&mut self) -> Result<PathBuf> {
-        let audio_path = 
-        match self.a_b_index {
+        let audio_path = match self.a_b_index {
             ABIndex::A => {
                 self.a_b_index = ABIndex::B;
-                self.score_list[self.current_idx].get_audio_file_path_a()              
+                self.score_list[self.current_idx].get_audio_file_path_a()
             }
             ABIndex::B => {
                 self.a_b_index = ABIndex::A;
@@ -82,24 +85,27 @@ impl TestTrial for ABThurstoneTrial {
     fn set_score(&mut self, score: Vec<isize>) -> Result<()> {
         let ab_score: ABIndex;
         match score[0] {
-            0 => {ab_score = ABIndex::A;},
-            1 => {ab_score = ABIndex::B;},
-            _ => {return Err(anyhow!("Invalid score for ABThurstone Test"));}
+            0 => {
+                ab_score = ABIndex::A;
+            }
+            1 => {
+                ab_score = ABIndex::B;
+            }
+            _ => {
+                return Err(anyhow!("Invalid score for ABThurstone Test"));
+            }
         }
 
         self.score_list[self.current_idx].set_score(ab_score);
         Ok(())
     }
     fn to_next(&mut self) -> Result<TrialStatus> {
-        let status = 
-        if self.score_list.len() > (self.current_idx + 1) {
+        let status = if self.score_list.len() > (self.current_idx + 1) {
             self.current_idx += 1;
             Ok(TrialStatus::Doing)
-        }
-        else if self.score_list.len() == (self.current_idx + 1){
+        } else if self.score_list.len() == (self.current_idx + 1) {
             Ok(TrialStatus::Done)
-        }
-        else {
+        } else {
             Err(anyhow!("Test had been ended"))
         };
 
@@ -121,8 +127,7 @@ impl ABThurstoneTrial {
         categories: Categories,
     ) -> Result<ABThurstoneTrial> {
         let trial_data_root = ABThurstoneTrial::get_trial_data_root(manager_data_root.clone())?;
-        let score_list =
-            ABThurstoneTrial::generate_score_list(manager_data_root, categories)?;
+        let score_list = ABThurstoneTrial::generate_score_list(manager_data_root, categories)?;
 
         Ok(ABThurstoneTrial {
             trial_data_root: trial_data_root,
@@ -137,7 +142,6 @@ impl ABThurstoneTrial {
         manager_data_root: PathBuf,
         categories: Categories,
     ) -> Result<Vec<ABThurstoneScore>> {
-
         let mut file_list: Vec<ABThurstoneScore> = Vec::new();
         let audio_filenames = categories.get_audio_filenames();
         let category_dir_root = manager_data_root.join(CATEGORIES_DIRNAME);
@@ -148,14 +152,17 @@ impl ABThurstoneTrial {
             let category_b_name = comb[1];
 
             for filename in &audio_filenames {
-                let category_a_path = category_dir_root.join(&category_a_name).join(filename.clone());
+                let category_a_path = category_dir_root
+                    .join(&category_a_name)
+                    .join(filename.clone());
                 let category_b_path = category_dir_root.join(&category_b_name).join(filename);
 
                 let score = ABThurstoneScore::new(
-                    category_a_name.to_string(), 
-                    category_a_path, 
-                    category_b_name.to_string(), 
-                    category_b_path);
+                    category_a_name.to_string(),
+                    category_a_path,
+                    category_b_name.to_string(),
+                    category_b_path,
+                );
 
                 file_list.push(score);
             }

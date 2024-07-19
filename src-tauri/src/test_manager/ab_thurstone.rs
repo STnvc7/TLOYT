@@ -1,5 +1,5 @@
-use crate::constants::{CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME};
-use crate::test_manager::{TestManager, ParticipantStatus, Categories};
+use crate::constants::{CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME, TRIAL_DIRNAME};
+use crate::test_manager::{Categories, ParticipantStatus, TestManager};
 use crate::test_trial::{ab_thurstone::ABThurstoneTrial, TestTrial, TrialStatus};
 
 use std::collections::HashMap;
@@ -47,15 +47,13 @@ impl TestManager for ABThurstoneManager {
     fn get_name(&self) -> String {
         self.name.clone()
     }
-    fn delete(&self) {}
 
     fn launch_trial(&mut self, participant_name: String) -> Result<()> {
-
         if self.active_trial.is_some() {
             return Err(anyhow!("There is other active trial"));
         }
         if self.participants.contains_key(&participant_name) == false {
-            return Err(anyhow!("That participant is not registered"))
+            return Err(anyhow!("That participant is not registered"));
         }
         match *self.participants.get(&participant_name).unwrap() {
             ParticipantStatus::Done => {
@@ -87,7 +85,7 @@ impl TestManager for ABThurstoneManager {
             Some(trial) => {
                 trial.set_score(score)?;
                 let status = trial.to_next()?;
-                return Ok(status)
+                return Ok(status);
             }
             None => {
                 return Err(anyhow!("There is no active trial"));
@@ -112,12 +110,19 @@ impl TestManager for ABThurstoneManager {
         Ok(())
     }
 
+    fn delete_trial(&mut self, examinee: String) -> Result<()> {
+        let trial_json_path = self.manager_data_root
+            .join(TRIAL_DIRNAME)
+            .join(format!("{}.json", examinee));
+        fs::remove_file(trial_json_path)?;
+        *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Yet;
+        self.save_setting()?;
+        Ok(())
+    }
+
     fn copy_categories(&self) -> Result<()> {
         for (_name, _path) in self.categories.get_name_path_iter() {
-            let destination = self
-                .manager_data_root
-                .join(CATEGORIES_DIRNAME)
-                .join(_name);
+            let destination = self.manager_data_root.join(CATEGORIES_DIRNAME).join(_name);
 
             let mut options = fs_extra::dir::CopyOptions::new();
             options.copy_inside = true;

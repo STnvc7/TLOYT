@@ -1,5 +1,5 @@
-pub mod mos;
 pub mod ab_thurstone;
+pub mod mos;
 
 use crate::constants::AVAILABLE_AUDIO_FILE_EXTENTION;
 use crate::test_manager::mos::MOSManager;
@@ -15,11 +15,11 @@ use std::path::PathBuf;
 #[allow(dead_code)]
 pub trait TestManager {
     fn get_name(&self) -> String;
-    fn delete(&self);
     fn launch_trial(&mut self, participant_name: String) -> Result<()>;
     fn get_audio(&mut self) -> Result<PathBuf>;
     fn set_score(&mut self, score: Vec<isize>) -> Result<TrialStatus>;
     fn close_trial(&mut self) -> Result<()>;
+    fn delete_trial(&mut self, examinee: String) -> Result<()>;
 
     //====================================================================
     fn copy_categories(&self) -> Result<()>;

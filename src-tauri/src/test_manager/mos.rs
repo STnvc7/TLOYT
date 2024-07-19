@@ -1,4 +1,6 @@
-use crate::constants::{CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME};
+use crate::constants::{
+    CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME, TRIAL_DIRNAME,
+};
 use crate::test_manager::{Categories, ParticipantStatus, TestManager};
 use crate::test_trial::{mos::MOSTrial, TestTrial, TrialStatus};
 
@@ -51,7 +53,6 @@ impl TestManager for MOSManager {
     fn get_name(&self) -> String {
         self.name.clone()
     }
-    fn delete(&self) {}
 
     fn launch_trial(&mut self, participant_name: String) -> Result<()> {
         if self.active_trial.is_some() {
@@ -112,6 +113,16 @@ impl TestManager for MOSManager {
 
         *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Done;
         self.active_trial = None;
+        self.save_setting()?;
+        Ok(())
+    }
+
+    fn delete_trial(&mut self, examinee: String) -> Result<()> {
+        let trial_json_path = self.manager_data_root
+            .join(TRIAL_DIRNAME)
+            .join(format!("{}.json", examinee));
+        fs::remove_file(trial_json_path)?;
+        *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Yet;
         self.save_setting()?;
         Ok(())
     }

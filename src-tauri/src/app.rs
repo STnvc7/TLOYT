@@ -1,6 +1,6 @@
 use crate::constants::{TEST_LIST_FILENAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME};
-use crate::test_manager::{mos::MOSManager, ab_thurstone::ABThurstoneManager};
 use crate::test_manager::TestManager;
+use crate::test_manager::{ab_thurstone::ABThurstoneManager, mos::MOSManager};
 use crate::test_trial::TrialStatus;
 
 use std::collections::HashMap;
@@ -86,7 +86,9 @@ impl ApplicationManager {
     ) -> Result<Box<dyn TestManager>> {
         match test_type {
             TestType::MOS => Ok(Box::new(MOSManager::from_json(setting_json_path)?)),
-            TestType::ABThurstone => Ok(Box::new(ABThurstoneManager::from_json(setting_json_path)?))
+            TestType::ABThurstone => {
+                Ok(Box::new(ABThurstoneManager::from_json(setting_json_path)?))
+            }
         }
     }
 
@@ -106,7 +108,10 @@ impl ApplicationManager {
     pub fn add_new_test(&mut self, test_type: TestType, json_string: String) -> Result<()> {
         let new_manager: Box<dyn TestManager> = match test_type {
             TestType::MOS => Box::new(MOSManager::setup(self.app_data_root.clone(), json_string)?),
-            TestType::ABThurstone => Box::new(ABThurstoneManager::setup(self.app_data_root.clone(), json_string)?),
+            TestType::ABThurstone => Box::new(ABThurstoneManager::setup(
+                self.app_data_root.clone(),
+                json_string,
+            )?),
         };
 
         let new_test_name = new_manager.get_name();
@@ -123,6 +128,20 @@ impl ApplicationManager {
         Ok(())
     }
 
+    pub fn delete_test(&mut self, test_name: String) -> Result<()> {
+        let test_data_dir = self.app_data_root
+            .join(TEST_MANAGER_DIRNAME).join(&test_name);
+        fs::remove_dir_all(test_data_dir)?;
+
+        self.test_list.remove(&test_name);
+        self.save_test_list()?;
+        Ok(())
+    }
+
+    pub fn delete_trial(&mut self, test_name: String, examinee: String) -> Result<()> {
+        self.managers.get_mut(&test_name).unwrap().delete_trial(examinee)?;
+        Ok(())
+    }
     //-------------------------------------------------
     pub fn save_test_list(&self) -> Result<()> {
         let test_list_path = self.app_data_root.join(TEST_LIST_FILENAME);
