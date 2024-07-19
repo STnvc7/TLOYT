@@ -147,15 +147,12 @@ impl ABThurstoneTrial {
         let category_dir_root = manager_data_root.join(CATEGORIES_DIRNAME);
 
         for mut comb in categories.get_names().iter().combinations(2) {
-            comb.shuffle(&mut rand::thread_rng());
-            let category_a_name = comb[0];
-            let category_b_name = comb[1];
-
             for filename in &audio_filenames {
-                let category_a_path = category_dir_root
-                    .join(&category_a_name)
-                    .join(filename.clone());
-                let category_b_path = category_dir_root.join(&category_b_name).join(filename);
+                comb.shuffle(&mut rand::thread_rng());
+                let category_a_name = comb[0];
+                let category_b_name = comb[1];
+                let category_a_path = category_dir_root.join(&category_a_name).join(&filename);
+                let category_b_path = category_dir_root.join(&category_b_name).join(&filename);
 
                 let score = ABThurstoneScore::new(
                     category_a_name.to_string(),

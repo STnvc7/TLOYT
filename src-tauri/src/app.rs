@@ -134,6 +134,7 @@ impl ApplicationManager {
         fs::remove_dir_all(test_data_dir)?;
 
         self.test_list.remove(&test_name);
+        self.managers.remove(&test_name);
         self.save_test_list()?;
         Ok(())
     }

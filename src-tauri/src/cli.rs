@@ -9,6 +9,8 @@ pub fn cli_test() -> Result<()> {
     let mut app_manager =
         ApplicationManager::setup(PathBuf::from("C:\\Users\\hiroh\\AppData\\Roaming\\TLOYT"))?;
 
+    app_manager.delete_test("AB".to_string())?;
+
     let json = r#"
     {
         "name": "AB",
