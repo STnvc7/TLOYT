@@ -1,33 +1,27 @@
-use crate::constants::TRIAL_DIRNAME;
-use crate::test_manager::Category;
-use crate::test_trial::{TestTrial, TrialStatus};
+use crate::constants::{CATEGORIES_DIRNAME, TRIAL_DIRNAME};
+use crate::test_manager::Categories;
+use crate::test_trial::{ScoreType, TestTrial, TrialStatus};
 
 use std::io::Write;
 use std::path::PathBuf;
 use std::{fs, fs::File};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum TargetType {
-    Valid,
-    Dummy,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MOSScore {
     category: String,
-    target_type: TargetType,
+    score_type: ScoreType,
     audio_file_path: PathBuf,
     score: Option<isize>,
 }
 impl MOSScore {
-    pub fn new(category: String, target_type: TargetType, audio_file_path: PathBuf) -> MOSScore {
+    pub fn new(category: String, score_type: ScoreType, audio_file_path: PathBuf) -> MOSScore {
         MOSScore {
             category: category,
-            target_type: target_type,
+            score_type: score_type,
             audio_file_path: audio_file_path,
             score: None,
         }
@@ -53,18 +47,22 @@ impl TestTrial for MOSTrial {
     fn get_examinee(&self) -> String {
         self.examinee.clone()
     }
-    fn get_audio(&self) -> PathBuf {
-        self.score_list[self.current_idx].get_audio_file_path()
+    fn get_audio(&mut self) -> Result<PathBuf> {
+        let audio_path = self.score_list[self.current_idx].get_audio_file_path();
+        Ok(audio_path)
     }
-    fn set_score(&mut self, score: Vec<isize>) {
+    fn set_score(&mut self, score: Vec<isize>) -> Result<()> {
         self.score_list[self.current_idx].set_score(score[0]);
+        Ok(())
     }
-    fn to_next(&mut self) -> TrialStatus {
+    fn to_next(&mut self) -> Result<TrialStatus> {
         if self.score_list.len() > (self.current_idx + 1) {
             self.current_idx += 1;
-            return TrialStatus::Doing;
+            return Ok(TrialStatus::Doing);
+        } else if self.score_list.len() == (self.current_idx + 1) {
+            return Ok(TrialStatus::Done);
         } else {
-            return TrialStatus::Done;
+            return Err(anyhow!("Test had been ended"));
         }
     }
     fn close(&self) -> Result<()> {
@@ -80,12 +78,11 @@ impl MOSTrial {
     pub fn generate(
         manager_data_root: PathBuf,
         examinee: String,
-        categories: Vec<Category>,
+        categories: Categories,
         num_repeat: usize,
     ) -> Result<MOSTrial> {
         let trial_data_root = MOSTrial::get_trial_data_root(manager_data_root.clone())?;
-        let score_list =
-            MOSTrial::generate_score_list(trial_data_root.clone(), categories, num_repeat)?;
+        let score_list = MOSTrial::generate_score_list(manager_data_root, categories, num_repeat)?;
 
         Ok(MOSTrial {
             trial_data_root: trial_data_root,
@@ -96,29 +93,28 @@ impl MOSTrial {
     }
 
     fn generate_score_list(
-        trial_data_root: PathBuf,
-        categories: Vec<Category>,
+        manager_data_root: PathBuf,
+        categories: Categories,
         num_repeat: usize,
     ) -> Result<Vec<MOSScore>> {
         let mut dummy_list: Vec<MOSScore> = Vec::new();
         let mut file_list: Vec<MOSScore> = Vec::new();
 
-        for category in &categories {
-            let category_name = category.get_category_name();
-            let category_dir = trial_data_root.join(&category_name);
+        let category_names = categories.get_names();
+        let audio_filenames = categories.get_audio_filenames();
 
-            let audio_files = category.get_audio_files();
+        for name in category_names {
+            let category_dir = manager_data_root.join(CATEGORIES_DIRNAME).join(&name);
 
-            let dummy_file = &audio_files.choose(&mut rand::thread_rng()).unwrap();
+            let dummy_file = &audio_filenames.choose(&mut rand::thread_rng()).unwrap();
             let dummy_file_path = category_dir.join(dummy_file);
-            let dummy = MOSScore::new(category_name.clone(), TargetType::Dummy, dummy_file_path);
+            let dummy = MOSScore::new(name.clone(), ScoreType::Dummy, dummy_file_path);
             dummy_list.push(dummy);
 
             for _ in 0..num_repeat {
-                for audio_file in &audio_files {
-                    let audio_file_path = category_dir.join(audio_file);
-                    let score =
-                        MOSScore::new(category_name.clone(), TargetType::Valid, audio_file_path);
+                for filename in &audio_filenames {
+                    let audio_file_path = category_dir.join(filename);
+                    let score = MOSScore::new(name.clone(), ScoreType::Valid, audio_file_path);
                     file_list.push(score);
                 }
             }

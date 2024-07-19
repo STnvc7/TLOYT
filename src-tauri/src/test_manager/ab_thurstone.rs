@@ -1,6 +1,6 @@
 use crate::constants::{CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME};
-use crate::test_manager::{TestManager, ParticipantStatus, Category};
-// use crate::test_trial::{ab_thurstone::ABThurstoneTrial, TestTrial, TrialStatus};
+use crate::test_manager::{TestManager, ParticipantStatus, Categories};
+use crate::test_trial::{ab_thurstone::ABThurstoneTrial, TestTrial, TrialStatus};
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -24,7 +24,6 @@ struct SetupInfo {
     categories: Vec<(String, PathBuf)>,
 
     time_limit: usize,
-    num_repeat: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -35,13 +34,12 @@ pub struct ABThurstoneManager {
     created_date: NaiveDate,
     description: String,
 
-    categories: Vec<Category>,
+    categories: Categories,
     participants: HashMap<String, ParticipantStatus>,
 
     time_limit: usize,
-    num_repeat: usize,
 
-    active_trial: Option<MOSTrial>,
+    active_trial: Option<ABThurstoneTrial>,
 }
 
 #[allow(dead_code)]
@@ -52,33 +50,43 @@ impl TestManager for ABThurstoneManager {
     fn delete(&self) {}
 
     fn launch_trial(&mut self, participant_name: String) -> Result<()> {
+
         if self.active_trial.is_some() {
             return Err(anyhow!("There is other active trial"));
         }
-        let new_trial = ABThrustoneTrial::generate(
+        if self.participants.contains_key(&participant_name) == false {
+            return Err(anyhow!("That participant is not registered"))
+        }
+        match *self.participants.get(&participant_name).unwrap() {
+            ParticipantStatus::Done => {
+                return Err(anyhow!("This participant has already taken the test"));
+            }
+            _ => {}
+        }
+
+        let new_trial = ABThurstoneTrial::generate(
             self.manager_data_root.clone(),
             participant_name,
             self.categories.clone(),
-            self.num_repeat,
         )?;
 
         self.active_trial = Some(new_trial);
         Ok(())
     }
-    fn get_audio(&self) -> Result<PathBuf> {
-        let path = match &self.active_trial {
-            Some(trial) => trial.get_audio(),
+    fn get_audio(&mut self) -> Result<PathBuf> {
+        let path = match self.active_trial.as_mut() {
+            Some(trial) => trial.get_audio()?,
             None => {
                 return Err(anyhow!("There is no active trial"));
             }
         };
-        Ok(path)
+        Ok(path.to_path_buf())
     }
-    fn set_answer(&mut self, rate: Vec<isize>) -> Result<TrialStatus> {
+    fn set_score(&mut self, score: Vec<isize>) -> Result<TrialStatus> {
         match self.active_trial.as_mut() {
             Some(trial) => {
-                trial.set_answer(rate);
-                let status = trial.to_next();
+                trial.set_score(score)?;
+                let status = trial.to_next()?;
                 return Ok(status)
             }
             None => {
@@ -100,21 +108,21 @@ impl TestManager for ABThurstoneManager {
 
         *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Done;
         self.active_trial = None;
+        self.save_setting()?;
         Ok(())
     }
 
     fn copy_categories(&self) -> Result<()> {
-        let categories = &self.categories;
-        for category in categories {
+        for (_name, _path) in self.categories.get_name_path_iter() {
             let destination = self
                 .manager_data_root
                 .join(CATEGORIES_DIRNAME)
-                .join(category.get_category_name());
+                .join(_name);
 
             let mut options = fs_extra::dir::CopyOptions::new();
             options.copy_inside = true;
             options.skip_exist = true;
-            fs_extra::dir::copy(category.get_original_path(), destination, &options)?;
+            fs_extra::dir::copy(_path, destination, &options)?;
         }
         Ok(())
     }
@@ -136,10 +144,9 @@ impl ABThurstoneManager {
         author: String,
         created_date: NaiveDate,
         description: String,
-        categories: Vec<Category>,
+        categories: Categories,
         participants: HashMap<String, ParticipantStatus>,
         time_limit: usize,
-        num_repeat: usize,
     ) -> ABThurstoneManager {
         ABThurstoneManager {
             manager_data_root: manager_data_root,
@@ -150,7 +157,6 @@ impl ABThurstoneManager {
             categories: categories,
             participants: participants,
             time_limit: time_limit,
-            num_repeat: num_repeat,
             active_trial: None,
         }
     }
@@ -169,8 +175,8 @@ impl ABThurstoneManager {
         let manager_data_root =
             ABThurstoneManager::get_manager_data_root(app_data_root.as_ref(), &info.name)?;
         let created_date = Local::now().date_naive();
-        let participants = ABThursstoneManager::setup_participants(info.participants);
-        let categories = ABThurstoneManager::setup_categories(info.categories)?;
+        let participants = ABThurstoneManager::setup_participants(info.participants);
+        let categories = Categories::setup(info.categories)?;
 
         return Ok(ABThurstoneManager::new(
             manager_data_root,
@@ -181,7 +187,6 @@ impl ABThurstoneManager {
             categories,
             participants,
             info.time_limit,
-            info.num_repeat,
         ));
     }
 
@@ -205,15 +210,5 @@ impl ABThurstoneManager {
             new_participants.insert(participant, ParticipantStatus::Yet);
         }
         return new_participants;
-    }
-    fn setup_categories(categories: Vec<(String, PathBuf)>) -> Result<Vec<Category>> {
-        let mut new_categories: Vec<Category> = Vec::new();
-        for category in categories {
-            let _name = category.0.replace(" ", "_");
-            let _path = category.1;
-            let _category = Category::new(_name, _path)?;
-            new_categories.push(_category);
-        }
-        return Ok(new_categories);
     }
 }

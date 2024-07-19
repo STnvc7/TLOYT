@@ -1,45 +1,52 @@
-use crate::constants::TRIAL_DIRNAME;
-use crate::test_manager::Category;
+use crate::constants::{TRIAL_DIRNAME, CATEGORIES_DIRNAME};
+use crate::test_manager::Categories;
 use crate::test_trial::{TestTrial, TrialStatus};
 
 use std::io::Write;
 use std::path::PathBuf;
 use std::{fs, fs::File};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
+use itertools::Itertools;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum TargetType {
-    Valid,
-    Dummy,
+enum ABIndex{
+    A,
+    B,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ABThurstoneScore {
-    category_A: String,
-    audio_file_path_A: PathBuf,
-    category_B: String,
-    audio_file_path_B: PathBuf,
+    category_a: String,
+    audio_file_path_a: PathBuf,
+    category_b: String,
+    audio_file_path_b: PathBuf,
     prefer_to: Option<String>,
 }
 impl ABThurstoneScore {
-    pub fn new(category: String, target_type: TargetType, audio_file_path: PathBuf) -> ABThurstoneScore {
+    pub fn new(category_a: String, audio_file_path_a: PathBuf, category_b: String, audio_file_path_b: PathBuf)
+    -> ABThurstoneScore {
         ABThurstoneScore {
-            category: category,
-            target_type: target_type,
-            audio_file_path: audio_file_path,
-            : None,
+            category_a: category_a,
+            audio_file_path_a: audio_file_path_a,
+            category_b: category_b,
+            audio_file_path_b: audio_file_path_b,
+            prefer_to: None,
         }
     }
     pub fn get_audio_file_path_a(&self) -> PathBuf {
-        self.audio_file_path_A.clone()
+        self.audio_file_path_a.clone()
     }
     pub fn get_audio_file_path_b(&self) -> PathBuf {
-        self.audio_file_path_B.clone()
+        self.audio_file_path_b.clone()
     }
-    pub fn set_score(&mut self, score: String) {
+    pub fn set_score(&mut self, ab_index: ABIndex) {
+        let score = match ab_index {
+            ABIndex::A => self.category_a.clone(),
+            ABIndex::B => self.category_b.clone(),
+        };
         self.prefer_to = Some(score);
     }
 }
@@ -51,36 +58,52 @@ pub struct ABThurstoneTrial {
     examinee: String,
     score_list: Vec<ABThurstoneScore>,
     current_idx: usize,
-    a_b_index: usize,
+    a_b_index: ABIndex,
 }
 
 impl TestTrial for ABThurstoneTrial {
     fn get_examinee(&self) -> String {
         self.examinee.clone()
     }
-    fn get_audio(&mut self) -> PathBuf {
+    fn get_audio(&mut self) -> Result<PathBuf> {
         let audio_path = 
-        if self.a_b_index == 0 {
-            self.a_b_index = 1;
-            self.score_list[self.current_idx].get_audio_file_path_a();
-        }
-        else if self.a_b_index == 1 {
-            self.a_b_index = 0;
-            self.score_list[self.current_idx].get_audio_file_path_b();
-        }
-        return audio_path
+        match self.a_b_index {
+            ABIndex::A => {
+                self.a_b_index = ABIndex::B;
+                self.score_list[self.current_idx].get_audio_file_path_a()              
+            }
+            ABIndex::B => {
+                self.a_b_index = ABIndex::A;
+                self.score_list[self.current_idx].get_audio_file_path_b()
+            }
+        };
+        Ok(audio_path)
     }
-    fn set_score(&mut self, score: Vec<isize>) {
-        self.score_list[self.current_idx].set_score(score[0]);
+    fn set_score(&mut self, score: Vec<isize>) -> Result<()> {
+        let ab_score: ABIndex;
+        match score[0] {
+            0 => {ab_score = ABIndex::A;},
+            1 => {ab_score = ABIndex::B;},
+            _ => {return Err(anyhow!("Invalid score for ABThurstone Test"));}
+        }
+
+        self.score_list[self.current_idx].set_score(ab_score);
+        Ok(())
     }
-    fn to_next(&mut self) -> TrialStatus{
+    fn to_next(&mut self) -> Result<TrialStatus> {
+        let status = 
         if self.score_list.len() > (self.current_idx + 1) {
             self.current_idx += 1;
-            return TrialStatus::Doing;
+            Ok(TrialStatus::Doing)
+        }
+        else if self.score_list.len() == (self.current_idx + 1){
+            Ok(TrialStatus::Done)
         }
         else {
-            return TrialStatus::Done;
-        }
+            Err(anyhow!("Test had been ended"))
+        };
+
+        status
     }
     fn close(&self) -> Result<()> {
         let json_string = serde_json::to_string_pretty(&self)?;
@@ -95,60 +118,54 @@ impl ABThurstoneTrial {
     pub fn generate(
         manager_data_root: PathBuf,
         examinee: String,
-        categories: Vec<Category>,
-        num_repeat: usize,
+        categories: Categories,
     ) -> Result<ABThurstoneTrial> {
         let trial_data_root = ABThurstoneTrial::get_trial_data_root(manager_data_root.clone())?;
         let score_list =
-            ABThurstoneTrial::generate_score_list(trial_data_root.clone(), categories, num_repeat)?;
+            ABThurstoneTrial::generate_score_list(manager_data_root, categories)?;
 
         Ok(ABThurstoneTrial {
             trial_data_root: trial_data_root,
             examinee: examinee,
             score_list: score_list,
             current_idx: 0,
-            a_b_index: 0,
+            a_b_index: ABIndex::A,
         })
     }
 
     fn generate_score_list(
-        trial_data_root: PathBuf,
-        categories: Vec<Category>,
-        num_repeat: usize,
+        manager_data_root: PathBuf,
+        categories: Categories,
     ) -> Result<Vec<ABThurstoneScore>> {
-        let mut dummy_list: Vec<ABThurstoneScore> = Vec::new();
+
         let mut file_list: Vec<ABThurstoneScore> = Vec::new();
+        let audio_filenames = categories.get_audio_filenames();
+        let category_dir_root = manager_data_root.join(CATEGORIES_DIRNAME);
 
-        for category in &categories {
-            let category_name = category.get_category_name();
-            let category_dir = trial_data_root.join(&category_name);
+        for mut comb in categories.get_names().iter().combinations(2) {
+            comb.shuffle(&mut rand::thread_rng());
+            let category_a_name = comb[0];
+            let category_b_name = comb[1];
 
-            let audio_files = category.get_audio_files();
+            for filename in &audio_filenames {
+                let category_a_path = category_dir_root.join(&category_a_name).join(filename.clone());
+                let category_b_path = category_dir_root.join(&category_b_name).join(filename);
 
-            let dummy_file = &audio_files.choose(&mut rand::thread_rng()).unwrap();
-            let dummy_file_path = category_dir.join(dummy_file);
-            let dummy =
-                ABThurstoneScore::new(category_name.clone(), TargetType::Dummy, dummy_file_path);
-            dummy_list.push(dummy);
+                let score = ABThurstoneScore::new(
+                    category_a_name.to_string(), 
+                    category_a_path, 
+                    category_b_name.to_string(), 
+                    category_b_path);
 
-            for _ in 0..num_repeat {
-                for audio_file in &audio_files {
-                    let audio_file_path = category_dir.join(audio_file);
-                    let score =
-                        ABThurstoneScore::new(category_name.clone(), TargetType::Valid, audio_file_path);
-                    file_list.push(score);
-                }
+                file_list.push(score);
             }
         }
-
         file_list.shuffle(&mut rand::thread_rng());
         file_list.shuffle(&mut rand::thread_rng());
         file_list.shuffle(&mut rand::thread_rng());
         file_list.shuffle(&mut rand::thread_rng());
 
-        let score_list = [dummy_list, file_list].concat();
-
-        Ok(score_list)
+        Ok(file_list)
     }
 
     fn get_trial_data_root(manager_data_root: PathBuf) -> Result<PathBuf> {

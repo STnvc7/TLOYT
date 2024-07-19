@@ -1,5 +1,5 @@
 use crate::constants::{CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME};
-use crate::test_manager::{Category, ParticipantStatus, TestManager};
+use crate::test_manager::{Categories, ParticipantStatus, TestManager};
 use crate::test_trial::{mos::MOSTrial, TestTrial, TrialStatus};
 
 use std::collections::HashMap;
@@ -12,9 +12,9 @@ use chrono::{Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 use serde_json;
 
-//===================================================
-// struct that holds information necessary for test setup
-// information is sent by the front end as serialized json and deserialized to this struct
+/*テストのセットアップのための情報を保持する構造体==========================================
+フロントエンドとの情報共有をこの構造体をシリアライズした文字列を通しておこなう
+*/
 #[derive(Serialize, Deserialize, Debug)]
 struct SetupInfo {
     name: String,
@@ -27,6 +27,8 @@ struct SetupInfo {
     num_repeat: usize,
 }
 
+/*MOSテストの管理をする構造体================================================
+*/
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MOSManager {
     manager_data_root: PathBuf,
@@ -35,7 +37,7 @@ pub struct MOSManager {
     created_date: NaiveDate,
     description: String,
 
-    categories: Vec<Category>,
+    categories: Categories,
     participants: HashMap<String, ParticipantStatus>,
 
     time_limit: usize,
@@ -55,6 +57,16 @@ impl TestManager for MOSManager {
         if self.active_trial.is_some() {
             return Err(anyhow!("There is other active trial"));
         }
+        if self.participants.contains_key(&participant_name) == false {
+            return Err(anyhow!("That participant is not registered"));
+        }
+        match *self.participants.get(&participant_name).unwrap() {
+            ParticipantStatus::Done => {
+                return Err(anyhow!("This participant has already taken the test"));
+            }
+            _ => {}
+        }
+
         let new_trial = MOSTrial::generate(
             self.manager_data_root.clone(),
             participant_name,
@@ -65,20 +77,20 @@ impl TestManager for MOSManager {
         self.active_trial = Some(new_trial);
         Ok(())
     }
-    fn get_audio(&self) -> Result<PathBuf> {
-        let path = match &self.active_trial {
-            Some(trial) => trial.get_audio(),
+    fn get_audio(&mut self) -> Result<PathBuf> {
+        let path = match self.active_trial.as_mut() {
+            Some(trial) => trial.get_audio()?,
             None => {
                 return Err(anyhow!("There is no active trial"));
             }
         };
-        Ok(path)
+        Ok(path.to_path_buf())
     }
     fn set_score(&mut self, score: Vec<isize>) -> Result<TrialStatus> {
         match self.active_trial.as_mut() {
             Some(trial) => {
-                trial.set_score(score);
-                let status = trial.to_next();
+                trial.set_score(score)?;
+                let status = trial.to_next()?;
                 return Ok(status);
             }
             None => {
@@ -100,21 +112,18 @@ impl TestManager for MOSManager {
 
         *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Done;
         self.active_trial = None;
+        self.save_setting()?;
         Ok(())
     }
 
     fn copy_categories(&self) -> Result<()> {
-        let categories = &self.categories;
-        for category in categories {
-            let destination = self
-                .manager_data_root
-                .join(CATEGORIES_DIRNAME)
-                .join(category.get_category_name());
+        for (_name, _path) in self.categories.get_name_path_iter() {
+            let destination = self.manager_data_root.join(CATEGORIES_DIRNAME).join(_name);
 
             let mut options = fs_extra::dir::CopyOptions::new();
             options.copy_inside = true;
             options.skip_exist = true;
-            fs_extra::dir::copy(category.get_original_path(), destination, &options)?;
+            fs_extra::dir::copy(_path, destination, &options)?;
         }
         Ok(())
     }
@@ -136,7 +145,7 @@ impl MOSManager {
         author: String,
         created_date: NaiveDate,
         description: String,
-        categories: Vec<Category>,
+        categories: Categories,
         participants: HashMap<String, ParticipantStatus>,
         time_limit: usize,
         num_repeat: usize,
@@ -170,7 +179,7 @@ impl MOSManager {
             MOSManager::get_manager_data_root(app_data_root.as_ref(), &info.name)?;
         let created_date = Local::now().date_naive();
         let participants = MOSManager::setup_participants(info.participants);
-        let categories = MOSManager::setup_categories(info.categories)?;
+        let categories = Categories::setup(info.categories)?;
 
         return Ok(MOSManager::new(
             manager_data_root,
@@ -205,15 +214,5 @@ impl MOSManager {
             new_participants.insert(participant, ParticipantStatus::Yet);
         }
         return new_participants;
-    }
-    fn setup_categories(categories: Vec<(String, PathBuf)>) -> Result<Vec<Category>> {
-        let mut new_categories: Vec<Category> = Vec::new();
-        for category in categories {
-            let _name = category.0.replace(" ", "_");
-            let _path = category.1;
-            let _category = Category::new(_name, _path)?;
-            new_categories.push(_category);
-        }
-        return Ok(new_categories);
     }
 }

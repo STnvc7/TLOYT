@@ -14,19 +14,6 @@
 //         .expect("error while running tauri application");
 // }
 
-// let json = r#"
-// {
-//     "name": "MOS_test2",
-//     "author": "k_hiro",
-//     "description": "Subjective Test for SSW",
-//     "participants": ["n_ichi", "m_oka"],
-//     "categories": [
-//         ["PCM", "C:\\Users\\hiroh\\Downloads\\PCM"],
-//         ["Deep Performer", "C:\\Users\\hiroh\\Downloads\\DeepPerformer"]
-//     ],
-//     "time_limit": 5,
-//     "num_repeat": 2
-// }"#;
 mod app;
 mod constants;
 mod test_manager;
@@ -47,20 +34,37 @@ fn main() -> Result<()> {
 fn cli_test() -> Result<()> {
     let mut app_manager =
         ApplicationManager::setup(PathBuf::from("C:\\Users\\hiroh\\AppData\\Roaming\\TLOYT"))?;
-    app_manager.start_test("MOS_test".to_string(), "n_ichi".to_string())?;
 
-    let scores = vec![1, 2, 3, 4, 5];
+    let json = r#"
+    {
+        "name": "AB",
+        "author": "k_hiro",
+        "description": "Subjective Test for SSW",
+        "participants": ["n_ichi", "m_oka"],
+        "categories": [
+            ["PCM", "C:\\Users\\hiroh\\Downloads\\GroundTruth"],
+            ["Deep Performer", "C:\\Users\\hiroh\\Downloads\\Proposed"]
+        ],
+        "time_limit": 5
+    }"#;
+
+    app_manager.add_new_test(TestType::ABThurstone, json.to_string())?;
+    app_manager.start_test("AB".to_string(), "n_ichi".to_string())?;
+
+    let scores = vec![0,1];
     loop {
-        let file = app_manager.get_audio("MOS_test".to_string())?;
-        println!("{:?}", file);
+        for _ in 0..=1{
+            let file = app_manager.get_audio("AB".to_string())?;
+            println!("{:?}", file);
+        }
         let selection = Select::new().items(&scores).interact()?;
-        let status = app_manager.set_score("MOS_test".to_string(), vec![scores[selection]])?;
+        let status = app_manager.set_score("AB".to_string(), vec![scores[selection]])?;
         match status {
             TrialStatus::Done => break,
             _ => {}
         }
     }
-    app_manager.close_test("MOS_test".to_string())?;
+    app_manager.close_test("AB".to_string())?;
 
     Ok(())
 }

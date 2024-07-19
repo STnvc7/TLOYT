@@ -1,4 +1,5 @@
 pub mod mos;
+pub mod ab_thurstone;
 
 use crate::constants::AVAILABLE_AUDIO_FILE_EXTENTION;
 use crate::test_manager::mos::MOSManager;
@@ -9,15 +10,14 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-//===================================================
-// struct that implement this trait behave as TestManager
-// TestManager controls(launch and close) each Trial
+/*===================================================
+*/
 #[allow(dead_code)]
 pub trait TestManager {
     fn get_name(&self) -> String;
     fn delete(&self);
     fn launch_trial(&mut self, participant_name: String) -> Result<()>;
-    fn get_audio(&self) -> Result<PathBuf>;
+    fn get_audio(&mut self) -> Result<PathBuf>;
     fn set_score(&mut self, score: Vec<isize>) -> Result<TrialStatus>;
     fn close_trial(&mut self) -> Result<()>;
 
@@ -33,18 +33,45 @@ pub enum ParticipantStatus {
     Done,
 }
 
-//===================================================
-// this struct is made for member of struct that implement TestManager trait.
+//==================================================
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Category {
-    category: String,
-    original_path: PathBuf,
-    audio_files: Vec<PathBuf>,
+pub struct Categories {
+    names: Vec<String>,
+    original_paths: Vec<PathBuf>,
+    filenames: Vec<String>,
 }
-#[allow(dead_code)]
-impl Category {
-    pub fn new(category: String, path: PathBuf) -> Result<Self> {
-        let mut audio_files: Vec<PathBuf> = Vec::new();
+impl Categories {
+    fn new(names: Vec<String>, original_paths: Vec<PathBuf>, filenames: Vec<String>) -> Categories {
+        Categories {
+            names: names,
+            original_paths: original_paths,
+            filenames: filenames,
+        }
+    }
+    pub fn setup(categories: Vec<(String, PathBuf)>) -> Result<Categories> {
+        let mut names: Vec<String> = Vec::new();
+        let mut original_paths: Vec<PathBuf> = Vec::new();
+        let mut filenames: Vec<String> = Vec::new();
+
+        for category in categories {
+            names.push(category.0.replace(" ", "_"));
+            original_paths.push(category.1.clone());
+
+            let _filenames = Categories::glob_audio_filenames(category.1)?;
+            if filenames.len() == 0 {
+                filenames = _filenames;
+                continue;
+            }
+            if filenames != _filenames {
+                return Err(anyhow!("The names of the audio files are not the same"));
+            }
+        }
+
+        Ok(Categories::new(names, original_paths, filenames))
+    }
+
+    fn glob_audio_filenames(path: PathBuf) -> Result<Vec<String>> {
+        let mut filenames: Vec<String> = Vec::new();
         let entries = fs::read_dir(&path)?;
         for entry in entries {
             let file_path = entry?.path();
@@ -58,25 +85,25 @@ impl Category {
             //有効な拡張子を持つファイルかどうか
             for extention in AVAILABLE_AUDIO_FILE_EXTENTION {
                 if extention == *period_splitted_name.last().unwrap() {
-                    audio_files.push(PathBuf::from(file_name));
+                    filenames.push(file_name);
                     break;
                 }
             }
         }
+        filenames.sort();
+        Ok(filenames)
+    }
 
-        return Ok(Category {
-            category: category,
-            original_path: path,
-            audio_files: audio_files,
-        });
+    pub fn get_names(&self) -> Vec<String> {
+        self.names.clone()
     }
-    pub fn get_category_name(&self) -> String {
-        self.category.clone()
+    pub fn get_original_paths(&self) -> Vec<PathBuf> {
+        self.original_paths.clone()
     }
-    pub fn get_original_path(&self) -> PathBuf {
-        self.original_path.clone()
+    pub fn get_audio_filenames(&self) -> Vec<String> {
+        self.filenames.clone()
     }
-    pub fn get_audio_files(&self) -> Vec<PathBuf> {
-        self.audio_files.clone()
+    pub fn get_name_path_iter(&self) -> impl Iterator<Item = (&String, &PathBuf)> {
+        self.names.iter().zip(self.original_paths.iter())
     }
 }

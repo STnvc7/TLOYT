@@ -1,5 +1,5 @@
 use crate::constants::{TEST_LIST_FILENAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME};
-use crate::test_manager::mos::MOSManager;
+use crate::test_manager::{mos::MOSManager, ab_thurstone::ABThurstoneManager};
 use crate::test_manager::TestManager;
 use crate::test_trial::TrialStatus;
 
@@ -11,18 +11,32 @@ use std::{fs, fs::File};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
+//テストの種類
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TestType {
     MOS,
+    ABThurstone,
 }
 
+/*アプリケーションをコントロールするマネージャ===================================
+初期化；init()
+設定の読み込み：setup()
+新しいテストの追加：add_new_test()
+テストの開始：start_test()
+
+*/
 pub struct ApplicationManager {
-    managers: HashMap<String, Box<dyn TestManager>>,
+    managers: HashMap<String, Box<dyn TestManager>>, //TestManagerのインスタンスを保持
     app_data_root: PathBuf,
     test_list: HashMap<String, TestType>,
 }
 #[allow(dead_code)]
 impl ApplicationManager {
+    /*本アプリケーションのセットアップ．-----------------------------------------
+    初回起動時(テストのリストがない) => init()
+    以前作成したテストがある場合 => load()
+    この構造体自体を返す．
+    */
     pub fn setup(app_data_root: PathBuf) -> Result<ApplicationManager> {
         let managers: HashMap<String, Box<dyn TestManager>>;
         let test_list: HashMap<String, TestType>;
@@ -45,6 +59,7 @@ impl ApplicationManager {
         })
     }
 
+    //作成済みのテストのテストマネージャをインスタンス化------------------------------------
     fn load(
         test_list: &HashMap<String, TestType>,
         app_data_root: PathBuf,
@@ -64,15 +79,18 @@ impl ApplicationManager {
         return Ok(managers);
     }
 
+    //-------------------------------------------------
     fn load_test_from_json(
         test_type: TestType,
         setting_json_path: PathBuf,
     ) -> Result<Box<dyn TestManager>> {
         match test_type {
-            TestType::MOS => return Ok(Box::new(MOSManager::from_json(setting_json_path)?)),
+            TestType::MOS => Ok(Box::new(MOSManager::from_json(setting_json_path)?)),
+            TestType::ABThurstone => Ok(Box::new(ABThurstoneManager::from_json(setting_json_path)?))
         }
     }
 
+    //-------------------------------------------------
     fn init(app_data_root: PathBuf) -> Result<()> {
         let test_list_path = app_data_root.join(TEST_LIST_FILENAME);
 
@@ -84,13 +102,16 @@ impl ApplicationManager {
         Ok(())
     }
 
+    //-------------------------------------------------
     pub fn add_new_test(&mut self, test_type: TestType, json_string: String) -> Result<()> {
-        let new_manager = match test_type {
+        let new_manager: Box<dyn TestManager> = match test_type {
             TestType::MOS => Box::new(MOSManager::setup(self.app_data_root.clone(), json_string)?),
+            TestType::ABThurstone => Box::new(ABThurstoneManager::setup(self.app_data_root.clone(), json_string)?),
         };
+
         let new_test_name = new_manager.get_name();
         if self.managers.contains_key(&new_test_name) {
-            return Err(anyhow!("Already Exist"));
+            return Err(anyhow!("This test name has been used"));
         }
 
         new_manager.copy_categories()?;
@@ -102,6 +123,7 @@ impl ApplicationManager {
         Ok(())
     }
 
+    //-------------------------------------------------
     pub fn save_test_list(&self) -> Result<()> {
         let test_list_path = self.app_data_root.join(TEST_LIST_FILENAME);
         let json_string = serde_json::to_string_pretty(&self.test_list)?;
@@ -110,8 +132,7 @@ impl ApplicationManager {
         Ok(())
     }
 
-    /*======================================================================================
-     */
+    //-------------------------------------------------
     pub fn start_test(&mut self, test_name: String, participant_name: String) -> Result<()> {
         self.managers
             .get_mut(&test_name)
@@ -120,16 +141,19 @@ impl ApplicationManager {
         Ok(())
     }
 
+    //-------------------------------------------------
     pub fn close_test(&mut self, test_name: String) -> Result<()> {
         self.managers.get_mut(&test_name).unwrap().close_trial()?;
         Ok(())
     }
 
+    //-------------------------------------------------
     pub fn get_audio(&mut self, test_name: String) -> Result<PathBuf> {
-        let audio_path = self.managers.get(&test_name).unwrap().get_audio()?;
+        let audio_path = self.managers.get_mut(&test_name).unwrap().get_audio()?;
         Ok(audio_path)
     }
 
+    //-------------------------------------------------
     pub fn set_score(&mut self, test_name: String, score: Vec<isize>) -> Result<TrialStatus> {
         let status = self
             .managers
