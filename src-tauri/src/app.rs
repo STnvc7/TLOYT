@@ -59,7 +59,8 @@ impl ApplicationManager {
         })
     }
 
-    //作成済みのテストのテストマネージャをインスタンス化------------------------------------
+    /*作成済みのテストのテストマネージャをインスタンス化------------------------------------
+     */
     fn load(
         test_list: &HashMap<String, TestType>,
         app_data_root: PathBuf,
@@ -105,7 +106,7 @@ impl ApplicationManager {
     }
 
     //-------------------------------------------------
-    pub fn add_new_test(&mut self, test_type: TestType, json_string: String) -> Result<()> {
+    pub fn add_test(&mut self, test_type: TestType, json_string: String) -> Result<()> {
         let new_manager: Box<dyn TestManager> = match test_type {
             TestType::MOS => Box::new(MOSManager::setup(self.app_data_root.clone(), json_string)?),
             TestType::ABThurstone => Box::new(ABThurstoneManager::setup(
@@ -148,8 +149,9 @@ impl ApplicationManager {
             .delete_trial(examinee)?;
         Ok(())
     }
+
     //-------------------------------------------------
-    pub fn save_test_list(&self) -> Result<()> {
+    fn save_test_list(&self) -> Result<()> {
         let test_list_path = self.app_data_root.join(TEST_LIST_FILENAME);
         let json_string = serde_json::to_string_pretty(&self.test_list)?;
         let mut file = File::create(test_list_path)?;
@@ -210,14 +212,5 @@ impl ApplicationManager {
             .unwrap()
             .set_score(score)?;
         Ok(status)
-    }
-
-    pub fn get_setup_info(&self, test_name: String) -> Result<String> {
-        let info_string = self
-            .managers
-            .get(&test_name)
-            .unwrap()
-            .get_setup_info()?;
-        Ok(info_string)
     }
 }

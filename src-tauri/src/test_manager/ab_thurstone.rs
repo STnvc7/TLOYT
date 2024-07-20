@@ -6,7 +6,7 @@ use crate::test_trial::{ab_thurstone::ABThurstoneTrial, TestTrial, TrialStatus};
 
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::{fs, fs::File};
 
 use anyhow::{anyhow, Result};

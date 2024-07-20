@@ -11,7 +11,7 @@ pub enum ScoreType {
     Dummy,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum TrialStatus {
     Doing,
     Done,

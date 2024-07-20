@@ -12,7 +12,7 @@ use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-enum ABIndex {
+pub enum ABIndex {
     A,
     B,
 }

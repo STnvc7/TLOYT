@@ -12,7 +12,7 @@ use std::path::PathBuf;
 /*===================================================
 */
 #[allow(dead_code)]
-pub trait TestManager {
+pub trait TestManager: Send + Sync {
     fn get_name(&self) -> String;
 
     fn launch_trial(&mut self, examinee: String) -> Result<()>;
