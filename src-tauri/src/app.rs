@@ -129,8 +129,10 @@ impl ApplicationManager {
     }
 
     pub fn delete_test(&mut self, test_name: String) -> Result<()> {
-        let test_data_dir = self.app_data_root
-            .join(TEST_MANAGER_DIRNAME).join(&test_name);
+        let test_data_dir = self
+            .app_data_root
+            .join(TEST_MANAGER_DIRNAME)
+            .join(&test_name);
         fs::remove_dir_all(test_data_dir)?;
 
         self.test_list.remove(&test_name);
@@ -140,7 +142,10 @@ impl ApplicationManager {
     }
 
     pub fn delete_trial(&mut self, test_name: String, examinee: String) -> Result<()> {
-        self.managers.get_mut(&test_name).unwrap().delete_trial(examinee)?;
+        self.managers
+            .get_mut(&test_name)
+            .unwrap()
+            .delete_trial(examinee)?;
         Ok(())
     }
     //-------------------------------------------------
@@ -153,17 +158,41 @@ impl ApplicationManager {
     }
 
     //-------------------------------------------------
-    pub fn start_test(&mut self, test_name: String, participant_name: String) -> Result<()> {
+    pub fn start_test(&mut self, test_name: String, examinee: String) -> Result<()> {
         self.managers
             .get_mut(&test_name)
             .unwrap()
-            .launch_trial(participant_name)?;
+            .launch_trial(examinee)?;
         Ok(())
     }
 
     //-------------------------------------------------
-    pub fn close_test(&mut self, test_name: String) -> Result<()> {
-        self.managers.get_mut(&test_name).unwrap().close_trial()?;
+    pub fn close_test(&mut self, test_name: String, examinee: String) -> Result<()> {
+        self.managers
+            .get_mut(&test_name)
+            .unwrap()
+            .close_trial(examinee)?;
+        Ok(())
+    }
+
+    pub fn start_preview(&mut self, test_name: String) -> Result<()> {
+        self.managers
+            .get_mut(&test_name)
+            .unwrap()
+            .launch_preview()?;
+        Ok(())
+    }
+
+    pub fn close_preview(&mut self, test_name: String) -> Result<()> {
+        self.managers.get_mut(&test_name).unwrap().close_preview()?;
+        Ok(())
+    }
+
+    pub fn edit_test(&mut self, test_name: String, json_string: String) -> Result<()> {
+        self.managers
+            .get_mut(&test_name)
+            .unwrap()
+            .edit(json_string)?;
         Ok(())
     }
 
@@ -181,5 +210,14 @@ impl ApplicationManager {
             .unwrap()
             .set_score(score)?;
         Ok(status)
+    }
+
+    pub fn get_setup_info(&self, test_name: String) -> Result<String> {
+        let info_string = self
+            .managers
+            .get(&test_name)
+            .unwrap()
+            .get_setup_info()?;
+        Ok(info_string)
     }
 }

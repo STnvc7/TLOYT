@@ -44,9 +44,6 @@ pub struct MOSTrial {
 }
 
 impl TestTrial for MOSTrial {
-    fn get_examinee(&self) -> String {
-        self.examinee.clone()
-    }
     fn get_audio(&mut self) -> Result<PathBuf> {
         let audio_path = self.score_list[self.current_idx].get_audio_file_path();
         Ok(audio_path)
@@ -65,7 +62,7 @@ impl TestTrial for MOSTrial {
             return Err(anyhow!("Test had been ended"));
         }
     }
-    fn close(&self) -> Result<()> {
+    fn save_result(&self) -> Result<()> {
         let json_string = serde_json::to_string_pretty(&self.score_list)?;
         let path = self.trial_data_root.join(format!("{}.json", self.examinee));
         let mut file = File::create(&path)?;

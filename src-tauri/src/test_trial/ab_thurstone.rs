@@ -66,9 +66,6 @@ pub struct ABThurstoneTrial {
 }
 
 impl TestTrial for ABThurstoneTrial {
-    fn get_examinee(&self) -> String {
-        self.examinee.clone()
-    }
     fn get_audio(&mut self) -> Result<PathBuf> {
         let audio_path = match self.a_b_index {
             ABIndex::A => {
@@ -111,7 +108,7 @@ impl TestTrial for ABThurstoneTrial {
 
         status
     }
-    fn close(&self) -> Result<()> {
+    fn save_result(&self) -> Result<()> {
         let json_string = serde_json::to_string_pretty(&self.score_list)?;
         let path = self.trial_data_root.join(format!("{}.json", self.examinee));
         let mut file = File::create(&path)?;

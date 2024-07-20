@@ -2,7 +2,6 @@ pub mod ab_thurstone;
 pub mod mos;
 
 use crate::constants::AVAILABLE_AUDIO_FILE_EXTENTION;
-use crate::test_manager::mos::MOSManager;
 use crate::test_trial::TrialStatus;
 
 use anyhow::{anyhow, Result};
@@ -15,15 +14,22 @@ use std::path::PathBuf;
 #[allow(dead_code)]
 pub trait TestManager {
     fn get_name(&self) -> String;
-    fn launch_trial(&mut self, participant_name: String) -> Result<()>;
+
+    fn launch_trial(&mut self, examinee: String) -> Result<()>;
+    fn close_trial(&mut self, examinee: String) -> Result<()>;
+    fn delete_trial(&mut self, examinee: String) -> Result<()>;
+    fn launch_preview(&mut self) -> Result<()>;
+    fn close_preview(&mut self) -> Result<()>;
+    fn edit(&mut self, json_string: String) -> Result<()>;
+
     fn get_audio(&mut self) -> Result<PathBuf>;
     fn set_score(&mut self, score: Vec<isize>) -> Result<TrialStatus>;
-    fn close_trial(&mut self) -> Result<()>;
-    fn delete_trial(&mut self, examinee: String) -> Result<()>;
 
     //====================================================================
     fn copy_categories(&self) -> Result<()>;
     fn save_setting(&self) -> Result<()>;
+
+    fn get_setup_info(&self) -> Result<String>;
 }
 
 //===================================================
@@ -96,9 +102,6 @@ impl Categories {
 
     pub fn get_names(&self) -> Vec<String> {
         self.names.clone()
-    }
-    pub fn get_original_paths(&self) -> Vec<PathBuf> {
-        self.original_paths.clone()
     }
     pub fn get_audio_filenames(&self) -> Vec<String> {
         self.filenames.clone()
