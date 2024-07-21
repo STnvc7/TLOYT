@@ -11,19 +11,9 @@ pub fn cli_test() -> Result<()> {
         ApplicationManager::setup(PathBuf::from("C:\\Users\\hiroh\\AppData\\Roaming\\TLOYT"))?;
 
     let app_manager = Mutex::new(manager);
-
-    let json = r#"
-    {
-        "name": "AB_test",
-        "author": "k_hiro",
-        "description": "Subjective Test for SSW",
-        "participants": ["n_ichi", "m_oka", "k_hiro"],
-        "categories": [
-            ["PCM", "C:\\Users\\hiroh\\Downloads\\GroundTruth"],
-            ["Deep Performer", "C:\\Users\\hiroh\\Downloads\\Proposed"]
-        ],
-        "time_limit": 5
-    }"#;
+    // app_manager.lock().unwrap().delete_test("MOS test".to_string())?;
+    // app_manager.lock().unwrap().add_test(TestType::MOS, json.to_string())?;
+    // app_manager.lock().unwrap().delete_trial("AB".to_string(), "n_ichi".to_string())?;
     app_manager
         .lock()
         .unwrap()
@@ -50,3 +40,17 @@ pub fn cli_test() -> Result<()> {
         .close_test("AB".to_string(), "n_ichi".to_string())?;
     Ok(())
 }
+
+// let json = r#"
+// {
+//     "name": "MOS test",
+//     "author": "k_hiro",
+//     "description": "Subjective Test for SSW",
+//     "participants": ["n_ichi", "m_oka", "k_hiro"],
+//     "categories": [
+//         ["PCM", "C:\\Users\\hiroh\\Downloads\\GroundTruth"],
+//         ["Deep Performer", "C:\\Users\\hiroh\\Downloads\\Proposed"]
+//     ],
+//     "time_limit": 5,
+//     "num_repeat": 2
+// }"#;

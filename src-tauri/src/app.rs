@@ -72,7 +72,6 @@ impl ApplicationManager {
                 .join(TEST_MANAGER_DIRNAME)
                 .join(&t_name)
                 .join(TEST_MANAGER_SETTING_FILENAME);
-
             let manager =
                 ApplicationManager::load_test_from_json(t_type.clone(), manager_json_path)?;
             managers.insert(t_name.clone(), manager);
@@ -134,6 +133,9 @@ impl ApplicationManager {
             .app_data_root
             .join(TEST_MANAGER_DIRNAME)
             .join(&test_name);
+        if test_data_dir.exists() == false {
+            return Err(anyhow!(format!("There is no test named {}", test_name)));
+        }
         fs::remove_dir_all(test_data_dir)?;
 
         self.test_list.remove(&test_name);
@@ -212,5 +214,14 @@ impl ApplicationManager {
             .unwrap()
             .set_score(score)?;
         Ok(status)
+    }
+
+    pub fn get_settings(&self) -> Result<Vec<(TestType, String)>> {
+        let mut settings: Vec<(TestType, String)> = Vec::new();
+        for (_name, _type) in self.test_list.iter() {
+            let setting = self.managers.get(_name).unwrap().get_setting()?;
+            settings.push((_type.clone(), setting));
+        }
+        Ok(settings)
     }
 }
