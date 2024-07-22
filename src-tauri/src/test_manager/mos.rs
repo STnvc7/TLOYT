@@ -7,7 +7,7 @@ use crate::error::ApplicationError;
 
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::{fs, fs::File};
 
 use anyhow::{anyhow, Result};
@@ -264,7 +264,8 @@ impl MOSManager {
     fn setup_participants(participants: Vec<String>) -> HashMap<String, ParticipantStatus> {
         let mut new_participants: HashMap<String, ParticipantStatus> = HashMap::new();
         for participant in participants {
-            new_participants.insert(participant, ParticipantStatus::Yet);
+            let _participant = participant.replace(" ", "_");
+            new_participants.insert(_participant, ParticipantStatus::Yet);
         }
         return new_participants;
     }

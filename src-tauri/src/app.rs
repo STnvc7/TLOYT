@@ -185,7 +185,6 @@ impl ApplicationManager {
     }
 
     pub fn start_preview(&mut self, test_name: String) -> Result<()> {
-        let test_name = self.active_test_name.as_mut().unwrap().clone();
         self.managers
             .get_mut(&test_name)
             .unwrap()

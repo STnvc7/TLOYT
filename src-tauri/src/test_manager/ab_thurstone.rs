@@ -259,7 +259,8 @@ impl ABThurstoneManager {
     fn setup_participants(participants: Vec<String>) -> HashMap<String, ParticipantStatus> {
         let mut new_participants: HashMap<String, ParticipantStatus> = HashMap::new();
         for participant in participants {
-            new_participants.insert(participant, ParticipantStatus::Yet);
+            let _participant = participant.replace(" ", "_");
+            new_participants.insert(_participant, ParticipantStatus::Yet);
         }
         return new_participants;
     }
