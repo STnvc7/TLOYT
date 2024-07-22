@@ -21,14 +21,14 @@ pub fn cli_test() -> Result<()> {
     let scores = vec![0, 1];
     loop {
         for _ in 0..=1 {
-            let file = app_manager.lock().unwrap().get_audio("AB".to_string())?;
+            let file = app_manager.lock().unwrap().get_audio()?;
             println!("{:?}", file);
         }
         let selection = Select::new().items(&scores).interact()?;
         let status = app_manager
             .lock()
             .unwrap()
-            .set_score("AB".to_string(), vec![scores[selection]])?;
+            .set_score(vec![scores[selection]])?;
         match status {
             TrialStatus::Done => break,
             _ => {}
@@ -37,7 +37,7 @@ pub fn cli_test() -> Result<()> {
     app_manager
         .lock()
         .unwrap()
-        .close_test("AB".to_string(), "n_ichi".to_string())?;
+        .close_test("n_ichi".to_string())?;
     Ok(())
 }
 

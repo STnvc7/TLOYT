@@ -61,10 +61,9 @@ pub fn start_test(
 #[tauri::command]
 pub fn close_test(
     app_manager: State<Mutex<ApplicationManager>>,
-    test_name: String,
     examinee: String,
 ) -> Result<(), String> {
-    let result = app_manager.lock().unwrap().close_test(test_name, examinee);
+    let result = app_manager.lock().unwrap().close_test(examinee);
     match result {
         Ok(_) => return Ok(()),
         Err(s) => return Err(s.to_string()),
@@ -74,9 +73,8 @@ pub fn close_test(
 #[tauri::command]
 pub fn get_audio(
     app_manager: State<Mutex<ApplicationManager>>,
-    test_name: String,
 ) -> Result<String, String> {
-    let result = app_manager.lock().unwrap().get_audio(test_name);
+    let result = app_manager.lock().unwrap().get_audio();
     match result {
         Ok(p) => {
             let path = p.to_string_lossy().into_owned();
@@ -89,10 +87,9 @@ pub fn get_audio(
 #[tauri::command]
 pub fn set_score(
     app_manager: State<Mutex<ApplicationManager>>,
-    test_name: String,
     score: Vec<isize>,
 ) -> Result<TrialStatus, String> {
-    let result = app_manager.lock().unwrap().set_score(test_name, score);
+    let result = app_manager.lock().unwrap().set_score(score);
     match result {
         Ok(v) => return Ok(v),
         Err(s) => return Err(s.to_string()),

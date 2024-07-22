@@ -72,7 +72,7 @@ impl Categories {
             }
             // カテゴリ内の音声ファイルのリストが異なる場合はエラー
             if filenames != _filenames {
-                return Err(anyhow!(ApplicationError::DifferentFilenameinCategoryError));
+                return Err(anyhow!(ApplicationError::DifferentFilenameInCategoryError));
             }
         }
 

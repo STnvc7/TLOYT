@@ -29,6 +29,7 @@ pub struct ApplicationManager {
     managers: HashMap<String, Box<dyn TestManager>>, //TestManagerのインスタンスを保持
     app_data_root: PathBuf,
     test_list: HashMap<String, TestType>,
+    active_test_name: Option<String>,
 }
 #[allow(dead_code)]
 impl ApplicationManager {
@@ -56,6 +57,7 @@ impl ApplicationManager {
             managers: managers,
             app_data_root: app_data_root,
             test_list: test_list,
+            active_test_name: None
         })
     }
 
@@ -167,11 +169,14 @@ impl ApplicationManager {
             .get_mut(&test_name)
             .unwrap()
             .launch_trial(examinee)?;
+        self.active_test_name = Some(test_name);
+
         Ok(())
     }
 
     //-------------------------------------------------
-    pub fn close_test(&mut self, test_name: String, examinee: String) -> Result<()> {
+    pub fn close_test(&mut self, examinee: String) -> Result<()> {
+        let test_name = self.active_test_name.as_mut().unwrap().clone();
         self.managers
             .get_mut(&test_name)
             .unwrap()
@@ -180,6 +185,7 @@ impl ApplicationManager {
     }
 
     pub fn start_preview(&mut self, test_name: String) -> Result<()> {
+        let test_name = self.active_test_name.as_mut().unwrap().clone();
         self.managers
             .get_mut(&test_name)
             .unwrap()
@@ -187,7 +193,8 @@ impl ApplicationManager {
         Ok(())
     }
 
-    pub fn close_preview(&mut self, test_name: String) -> Result<()> {
+    pub fn close_preview(&mut self) -> Result<()> {
+        let test_name = self.active_test_name.as_mut().unwrap().clone();
         self.managers.get_mut(&test_name).unwrap().close_preview()?;
         Ok(())
     }
@@ -201,13 +208,15 @@ impl ApplicationManager {
     }
 
     //-------------------------------------------------
-    pub fn get_audio(&mut self, test_name: String) -> Result<PathBuf> {
+    pub fn get_audio(&mut self) -> Result<PathBuf> {
+        let test_name = self.active_test_name.as_mut().unwrap().clone();
         let audio_path = self.managers.get_mut(&test_name).unwrap().get_audio()?;
         Ok(audio_path)
     }
 
     //-------------------------------------------------
-    pub fn set_score(&mut self, test_name: String, score: Vec<isize>) -> Result<TrialStatus> {
+    pub fn set_score(&mut self, score: Vec<isize>) -> Result<TrialStatus> {
+        let test_name = self.active_test_name.as_mut().unwrap().clone();
         let status = self
             .managers
             .get_mut(&test_name)
