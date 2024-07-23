@@ -2,7 +2,7 @@ use crate::constants::{
     CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME, TRIAL_DIRNAME,
 };
 use crate::test_manager::{Categories, ParticipantStatus, TestManager};
-use crate::test_trial::{mos::MOSTrial, TestTrial, TrialStatus};
+use crate::test_trial::{mos::MosTrial, TestTrial, TrialStatus};
 use crate::error::ApplicationError;
 
 use std::collections::{HashMap, HashSet};
@@ -30,9 +30,9 @@ struct SetupInfo {
     num_repeat: usize,
 }
 
-// MOSテストのテストマネージャ================================================
+// Mosテストのテストマネージャ================================================
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MOSManager {
+pub struct MosManager {
     manager_data_root: PathBuf,
     name: String,
     author: String,
@@ -43,11 +43,11 @@ pub struct MOSManager {
     participants: HashMap<String, ParticipantStatus>,
     time_limit: usize,
     num_repeat: usize,
-    active_trial: Option<MOSTrial>,
+    active_trial: Option<MosTrial>,
 }
 
 #[allow(dead_code)]
-impl TestManager for MOSManager {
+impl TestManager for MosManager {
     fn get_name(&self) -> String {
         self.name.clone()
     }
@@ -66,7 +66,7 @@ impl TestManager for MOSManager {
             return Err(anyhow!(ApplicationError::AlreadyTakenTrialError(examinee)));
         }
 
-        let new_trial = MOSTrial::generate(
+        let new_trial = MosTrial::generate(
             self.manager_data_root.clone(),
             examinee,
             self.categories.clone(),
@@ -113,7 +113,7 @@ impl TestManager for MOSManager {
     // テストのプレビューを開始-------------------------------------------------
     fn launch_preview(&mut self) -> Result<()> {
         // 受験者の名前を設定せずにトライアルを生成
-        let preview_trial = MOSTrial::generate(
+        let preview_trial = MosTrial::generate(
             self.manager_data_root.clone(),
             String::new(),
             self.categories.clone(),
@@ -189,7 +189,7 @@ impl TestManager for MOSManager {
     }
 }
 
-impl MOSManager {
+impl MosManager {
     fn new(
         manager_data_root: PathBuf,
         name: String,
@@ -201,8 +201,8 @@ impl MOSManager {
         participants: HashMap<String, ParticipantStatus>,
         time_limit: usize,
         num_repeat: usize,
-    ) -> MOSManager {
-        MOSManager {
+    ) -> MosManager {
+        MosManager {
             manager_data_root: manager_data_root,
             name: name,
             author: author,
@@ -218,7 +218,7 @@ impl MOSManager {
     }
 
     // jsonファイルをデシリアライズして構造体を生成------------------------------------------
-    pub fn from_json(path_to_test_config: PathBuf) -> Result<MOSManager> {
+    pub fn from_json(path_to_test_config: PathBuf) -> Result<MosManager> {
         // ファイルがなければエラー
         if path_to_test_config.exists() == false {
             return Err(anyhow!(ApplicationError::TestDataNotFoundError(
@@ -226,18 +226,18 @@ impl MOSManager {
             )));
         }
         let json_string = fs::read_to_string(path_to_test_config)?;
-        let this_test: MOSManager = serde_json::from_str(&json_string)?;
+        let this_test: MosManager = serde_json::from_str(&json_string)?;
         return Ok(this_test);
     }
 
     // フロントエンドから送られたセットアップ情報から構造体を構成------------------------------
-    pub fn setup(app_data_root: PathBuf, json_string: String) -> Result<MOSManager> {
+    pub fn setup(app_data_root: PathBuf, json_string: String) -> Result<MosManager> {
         let info: SetupInfo = serde_json::from_str(&json_string)?;
         let manager_data_root =
-            MOSManager::get_manager_data_root(app_data_root, info.name.clone())?;
+            MosManager::get_manager_data_root(app_data_root, info.name.clone())?;
         let categories = Categories::setup(info.categories)?;
 
-        return Ok(MOSManager::new(
+        return Ok(MosManager::new(
             manager_data_root,
             info.name,
             info.author,
@@ -245,7 +245,7 @@ impl MOSManager {
             Local::now().date_naive(),
             info.description,
             categories,
-            MOSManager::setup_participants(info.participants),
+            MosManager::setup_participants(info.participants),
             info.time_limit,
             info.num_repeat,
         ));

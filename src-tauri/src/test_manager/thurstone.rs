@@ -3,7 +3,7 @@ use crate::constants::{
 };
 use crate::error::ApplicationError;
 use crate::test_manager::{Categories, ParticipantStatus, TestManager};
-use crate::test_trial::{ab_thurstone::ABThurstoneTrial, TestTrial, TrialStatus};
+use crate::test_trial::{thurstone::ThurstoneTrial, TestTrial, TrialStatus};
 
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
@@ -32,7 +32,7 @@ struct SetupInfo {
 
 //サーストン法を用いた一対比較法のテストマネージャ========================
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ABThurstoneManager {
+pub struct ThurstoneManager {
     manager_data_root: PathBuf,
     name: String,
     author: String,
@@ -42,11 +42,11 @@ pub struct ABThurstoneManager {
     categories: Categories,
     participants: HashMap<String, ParticipantStatus>,
     time_limit: usize,
-    active_trial: Option<ABThurstoneTrial>,
+    active_trial: Option<ThurstoneTrial>,
 }
 
 #[allow(dead_code)]
-impl TestManager for ABThurstoneManager {
+impl TestManager for ThurstoneManager {
     fn get_name(&self) -> String {
         self.name.clone()
     }
@@ -65,7 +65,7 @@ impl TestManager for ABThurstoneManager {
             return Err(anyhow!(ApplicationError::AlreadyTakenTrialError(examinee)));
         }
 
-        let new_trial = ABThurstoneTrial::generate(
+        let new_trial = ThurstoneTrial::generate(
             self.manager_data_root.clone(),
             examinee,
             self.categories.clone(),
@@ -111,7 +111,7 @@ impl TestManager for ABThurstoneManager {
     // テストのプレビューを開始-------------------------------------------------
     fn launch_preview(&mut self) -> Result<()> {
         // 受験者の名前を設定せずにトライアルを生成
-        let preview_trial = ABThurstoneTrial::generate(
+        let preview_trial = ThurstoneTrial::generate(
             self.manager_data_root.clone(),
             String::new(),
             self.categories.clone(),
@@ -186,7 +186,7 @@ impl TestManager for ABThurstoneManager {
     }
 }
 
-impl ABThurstoneManager {
+impl ThurstoneManager {
     fn new(
         manager_data_root: PathBuf,
         name: String,
@@ -197,8 +197,8 @@ impl ABThurstoneManager {
         categories: Categories,
         participants: HashMap<String, ParticipantStatus>,
         time_limit: usize,
-    ) -> ABThurstoneManager {
-        ABThurstoneManager {
+    ) -> ThurstoneManager {
+        ThurstoneManager {
             manager_data_root: manager_data_root,
             name: name,
             author: author,
@@ -213,7 +213,7 @@ impl ABThurstoneManager {
     }
 
     // jsonファイルをデシリアライズして構造体を生成------------------------------------------
-    pub fn from_json(path_to_test_config: PathBuf) -> Result<ABThurstoneManager> {
+    pub fn from_json(path_to_test_config: PathBuf) -> Result<ThurstoneManager> {
         // ファイルがなければエラー
         if path_to_test_config.exists() == false {
             return Err(anyhow!(ApplicationError::TestDataNotFoundError(
@@ -221,19 +221,19 @@ impl ABThurstoneManager {
             )));
         }
         let json_string = fs::read_to_string(path_to_test_config)?;
-        let this_test: ABThurstoneManager = serde_json::from_str(&json_string)?;
+        let this_test: ThurstoneManager = serde_json::from_str(&json_string)?;
         return Ok(this_test);
     }
 
     // フロントエンドから送られたセットアップ情報から構造体を構成------------------------------
-    pub fn setup(app_data_root: PathBuf, json_string: String) -> Result<ABThurstoneManager> {
+    pub fn setup(app_data_root: PathBuf, json_string: String) -> Result<ThurstoneManager> {
         let info: SetupInfo = serde_json::from_str(&json_string)?;
         let name = info.name.replace(" ", "_");
         let manager_data_root =
-            ABThurstoneManager::get_manager_data_root(app_data_root, name.clone())?;
+            ThurstoneManager::get_manager_data_root(app_data_root, name.clone())?;
         let categories = Categories::setup(info.categories)?;
 
-        return Ok(ABThurstoneManager::new(
+        return Ok(ThurstoneManager::new(
             manager_data_root,
             name,
             info.author,
@@ -241,7 +241,7 @@ impl ABThurstoneManager {
             Local::now().date_naive(),
             info.description,
             categories,
-            ABThurstoneManager::setup_participants(info.participants),
+            ThurstoneManager::setup_participants(info.participants),
             info.time_limit,
         ));
     }

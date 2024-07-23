@@ -1,6 +1,6 @@
 use crate::constants::{TEST_LIST_FILENAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME};
 use crate::test_manager::TestManager;
-use crate::test_manager::{ab_thurstone::ABThurstoneManager, mos::MOSManager};
+use crate::test_manager::{thurstone::ThurstoneManager, mos::MosManager};
 use crate::test_trial::TrialStatus;
 
 use std::collections::HashMap;
@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 //テストの種類
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TestType {
-    MOS,
-    ABThurstone,
+    Mos,
+    Thurstone,
 }
 
 /*アプリケーションをコントロールするマネージャ===================================
@@ -87,9 +87,9 @@ impl ApplicationManager {
         setting_json_path: PathBuf,
     ) -> Result<Box<dyn TestManager>> {
         match test_type {
-            TestType::MOS => Ok(Box::new(MOSManager::from_json(setting_json_path)?)),
-            TestType::ABThurstone => {
-                Ok(Box::new(ABThurstoneManager::from_json(setting_json_path)?))
+            TestType::Mos => Ok(Box::new(MosManager::from_json(setting_json_path)?)),
+            TestType::Thurstone => {
+                Ok(Box::new(ThurstoneManager::from_json(setting_json_path)?))
             }
         }
     }
@@ -109,8 +109,8 @@ impl ApplicationManager {
     //-------------------------------------------------
     pub fn add_test(&mut self, test_type: TestType, json_string: String) -> Result<()> {
         let new_manager: Box<dyn TestManager> = match test_type {
-            TestType::MOS => Box::new(MOSManager::setup(self.app_data_root.clone(), json_string)?),
-            TestType::ABThurstone => Box::new(ABThurstoneManager::setup(
+            TestType::Mos => Box::new(MosManager::setup(self.app_data_root.clone(), json_string)?),
+            TestType::Thurstone => Box::new(ThurstoneManager::setup(
                 self.app_data_root.clone(),
                 json_string,
             )?),

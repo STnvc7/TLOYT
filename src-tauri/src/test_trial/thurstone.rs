@@ -18,21 +18,21 @@ pub enum ABIndex {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ABThurstoneScore {
+pub struct ThurstoneScore {
     category_a: String,
     audio_file_path_a: PathBuf,
     category_b: String,
     audio_file_path_b: PathBuf,
     prefer_to: Option<String>,
 }
-impl ABThurstoneScore {
+impl ThurstoneScore {
     pub fn new(
         category_a: String,
         audio_file_path_a: PathBuf,
         category_b: String,
         audio_file_path_b: PathBuf,
-    ) -> ABThurstoneScore {
-        ABThurstoneScore {
+    ) -> ThurstoneScore {
+        ThurstoneScore {
             category_a: category_a,
             audio_file_path_a: audio_file_path_a,
             category_b: category_b,
@@ -57,15 +57,15 @@ impl ABThurstoneScore {
 
 #[allow(unused_variables)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ABThurstoneTrial {
+pub struct ThurstoneTrial {
     trial_data_root: PathBuf,
     examinee: String,
-    score_list: Vec<ABThurstoneScore>,
+    score_list: Vec<ThurstoneScore>,
     current_idx: usize,
     a_b_index: ABIndex,
 }
 
-impl TestTrial for ABThurstoneTrial {
+impl TestTrial for ThurstoneTrial {
     fn get_audio(&mut self) -> Result<PathBuf> {
         let audio_path = match self.a_b_index {
             ABIndex::A => {
@@ -117,16 +117,16 @@ impl TestTrial for ABThurstoneTrial {
     }
 }
 
-impl ABThurstoneTrial {
+impl ThurstoneTrial {
     pub fn generate(
         manager_data_root: PathBuf,
         examinee: String,
         categories: Categories,
-    ) -> Result<ABThurstoneTrial> {
-        let trial_data_root = ABThurstoneTrial::get_trial_data_root(manager_data_root.clone())?;
-        let score_list = ABThurstoneTrial::generate_score_list(manager_data_root, categories)?;
+    ) -> Result<ThurstoneTrial> {
+        let trial_data_root = ThurstoneTrial::get_trial_data_root(manager_data_root.clone())?;
+        let score_list = ThurstoneTrial::generate_score_list(manager_data_root, categories)?;
 
-        Ok(ABThurstoneTrial {
+        Ok(ThurstoneTrial {
             trial_data_root: trial_data_root,
             examinee: examinee,
             score_list: score_list,
@@ -138,8 +138,8 @@ impl ABThurstoneTrial {
     fn generate_score_list(
         manager_data_root: PathBuf,
         categories: Categories,
-    ) -> Result<Vec<ABThurstoneScore>> {
-        let mut file_list: Vec<ABThurstoneScore> = Vec::new();
+    ) -> Result<Vec<ThurstoneScore>> {
+        let mut file_list: Vec<ThurstoneScore> = Vec::new();
         let audio_filenames = categories.get_audio_filenames();
         let category_dir_root = manager_data_root.join(CATEGORIES_DIRNAME);
 
@@ -151,7 +151,7 @@ impl ABThurstoneTrial {
                 let category_a_path = category_dir_root.join(&category_a_name).join(&filename);
                 let category_b_path = category_dir_root.join(&category_b_name).join(&filename);
 
-                let score = ABThurstoneScore::new(
+                let score = ThurstoneScore::new(
                     category_a_name.to_string(),
                     category_a_path,
                     category_b_name.to_string(),

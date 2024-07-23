@@ -1,4 +1,4 @@
-pub mod ab_thurstone;
+pub mod thurstone;
 pub mod mos;
 
 use crate::constants::AVAILABLE_AUDIO_FILE_EXTENTION;

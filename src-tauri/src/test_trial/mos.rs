@@ -11,15 +11,15 @@ use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MOSScore {
+pub struct MosScore {
     category: String,
     score_type: ScoreType,
     audio_file_path: PathBuf,
     score: Option<isize>,
 }
-impl MOSScore {
-    pub fn new(category: String, score_type: ScoreType, audio_file_path: PathBuf) -> MOSScore {
-        MOSScore {
+impl MosScore {
+    pub fn new(category: String, score_type: ScoreType, audio_file_path: PathBuf) -> MosScore {
+        MosScore {
             category: category,
             score_type: score_type,
             audio_file_path: audio_file_path,
@@ -36,14 +36,14 @@ impl MOSScore {
 
 #[allow(unused_variables)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MOSTrial {
+pub struct MosTrial {
     trial_data_root: PathBuf,
     examinee: String,
-    score_list: Vec<MOSScore>,
+    score_list: Vec<MosScore>,
     current_idx: usize,
 }
 
-impl TestTrial for MOSTrial {
+impl TestTrial for MosTrial {
     fn get_audio(&mut self) -> Result<PathBuf> {
         let audio_path = self.score_list[self.current_idx].get_audio_file_path();
         Ok(audio_path)
@@ -71,17 +71,17 @@ impl TestTrial for MOSTrial {
     }
 }
 
-impl MOSTrial {
+impl MosTrial {
     pub fn generate(
         manager_data_root: PathBuf,
         examinee: String,
         categories: Categories,
         num_repeat: usize,
-    ) -> Result<MOSTrial> {
-        let trial_data_root = MOSTrial::get_trial_data_root(manager_data_root.clone())?;
-        let score_list = MOSTrial::generate_score_list(manager_data_root, categories, num_repeat)?;
+    ) -> Result<MosTrial> {
+        let trial_data_root = MosTrial::get_trial_data_root(manager_data_root.clone())?;
+        let score_list = MosTrial::generate_score_list(manager_data_root, categories, num_repeat)?;
 
-        Ok(MOSTrial {
+        Ok(MosTrial {
             trial_data_root: trial_data_root,
             examinee: examinee,
             score_list: score_list,
@@ -93,9 +93,9 @@ impl MOSTrial {
         manager_data_root: PathBuf,
         categories: Categories,
         num_repeat: usize,
-    ) -> Result<Vec<MOSScore>> {
-        let mut dummy_list: Vec<MOSScore> = Vec::new();
-        let mut file_list: Vec<MOSScore> = Vec::new();
+    ) -> Result<Vec<MosScore>> {
+        let mut dummy_list: Vec<MosScore> = Vec::new();
+        let mut file_list: Vec<MosScore> = Vec::new();
 
         let category_names = categories.get_names();
         let audio_filenames = categories.get_audio_filenames();
@@ -105,13 +105,13 @@ impl MOSTrial {
 
             let dummy_file = &audio_filenames.choose(&mut rand::thread_rng()).unwrap();
             let dummy_file_path = category_dir.join(dummy_file);
-            let dummy = MOSScore::new(name.clone(), ScoreType::Dummy, dummy_file_path);
+            let dummy = MosScore::new(name.clone(), ScoreType::Dummy, dummy_file_path);
             dummy_list.push(dummy);
 
             for _ in 0..num_repeat {
                 for filename in &audio_filenames {
                     let audio_file_path = category_dir.join(filename);
-                    let score = MOSScore::new(name.clone(), ScoreType::Valid, audio_file_path);
+                    let score = MosScore::new(name.clone(), ScoreType::Valid, audio_file_path);
                     file_list.push(score);
                 }
             }
