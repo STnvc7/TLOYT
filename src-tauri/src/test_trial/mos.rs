@@ -44,9 +44,9 @@ pub struct MosTrial {
 }
 
 impl TestTrial for MosTrial {
-    fn get_audio(&mut self) -> Result<PathBuf> {
+    fn get_audio(&mut self) -> Result<Vec<PathBuf>> {
         let audio_path = self.score_list[self.current_idx].get_audio_file_path();
-        Ok(audio_path)
+        Ok(vec![audio_path])
     }
     fn set_score(&mut self, score: Vec<isize>) -> Result<()> {
         self.score_list[self.current_idx].set_score(score[0]);

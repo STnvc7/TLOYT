@@ -229,7 +229,7 @@ impl ApplicationManager {
     }
 
     //-------------------------------------------------
-    pub fn get_audio(&mut self) -> Result<PathBuf> {
+    pub fn get_audio(&mut self) -> Result<Vec<PathBuf>> {
         let test_name = self.active_test_name.as_mut().unwrap().clone();
         if self.managers.contains_key(&test_name) == false {
             return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));

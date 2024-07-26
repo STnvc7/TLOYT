@@ -21,7 +21,7 @@ pub trait TestManager: Send + Sync {
     fn launch_preview(&mut self) -> Result<()>;
     fn close_preview(&mut self) -> Result<()>;
     fn edit(&mut self, json_string: String) -> Result<()>;
-    fn get_audio(&mut self) -> Result<PathBuf>;
+    fn get_audio(&mut self) -> Result<Vec<PathBuf>>;
     fn set_score(&mut self, score: Vec<String>) -> Result<TrialStatus>;
     //----------------------------------------------------------------
     fn copy_categories(&self) -> Result<()>;

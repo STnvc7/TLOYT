@@ -40,11 +40,9 @@ impl ThurstoneScore {
             prefer_to: None,
         }
     }
-    pub fn get_audio_file_path_a(&self) -> PathBuf {
-        self.audio_file_path_a.clone()
-    }
-    pub fn get_audio_file_path_b(&self) -> PathBuf {
-        self.audio_file_path_b.clone()
+    pub fn get_audio_file_path(&self) -> Vec<PathBuf> {
+        let paths = vec![self.audio_file_path_a.clone(), self.audio_file_path_b.clone()];
+        paths
     }
     pub fn set_score(&mut self, ab_index: ABIndex) {
         let score = match ab_index {
@@ -62,22 +60,12 @@ pub struct ThurstoneTrial {
     examinee: String,
     score_list: Vec<ThurstoneScore>,
     current_idx: usize,
-    a_b_index: ABIndex,
 }
 
 impl TestTrial for ThurstoneTrial {
-    fn get_audio(&mut self) -> Result<PathBuf> {
-        let audio_path = match self.a_b_index {
-            ABIndex::A => {
-                self.a_b_index = ABIndex::B;
-                self.score_list[self.current_idx].get_audio_file_path_a()
-            }
-            ABIndex::B => {
-                self.a_b_index = ABIndex::A;
-                self.score_list[self.current_idx].get_audio_file_path_b()
-            }
-        };
-        Ok(audio_path)
+    fn get_audio(&mut self) -> Result<Vec<PathBuf>> {
+        let audio_paths = self.score_list[self.current_idx].get_audio_file_path();
+        Ok(audio_paths)
     }
     fn set_score(&mut self, score: Vec<isize>) -> Result<()> {
         let ab_score: ABIndex;
@@ -131,7 +119,6 @@ impl ThurstoneTrial {
             examinee: examinee,
             score_list: score_list,
             current_idx: 0,
-            a_b_index: ABIndex::A,
         })
     }
 

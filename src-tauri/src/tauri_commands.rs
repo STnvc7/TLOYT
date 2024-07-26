@@ -73,12 +73,14 @@ pub fn close_test(
 #[tauri::command(rename_all = "snake_case")]
 pub fn get_audio(
     app_manager: State<Mutex<ApplicationManager>>,
-) -> Result<String, String> {
+) -> Result<Vec<String>, String> {
     let result = app_manager.lock().unwrap().get_audio();
     match result {
         Ok(p) => {
-            let path = p.to_string_lossy().into_owned();
-            return Ok(path);
+            let paths: Vec<String> = p.into_iter()
+            .map(|_p| _p.to_string_lossy().into_owned())
+            .collect();
+            return Ok(paths);
         }
         Err(s) => return Err(s.to_string()),
     }

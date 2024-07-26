@@ -145,9 +145,9 @@ impl TestManager for ThurstoneManager {
     }
 
     // テスト音声のファイルパスを返す------------------------------------------------
-    fn get_audio(&mut self) -> Result<PathBuf> {
+    fn get_audio(&mut self) -> Result<Vec<PathBuf>> {
         let path = self.active_trial.as_mut().unwrap().get_audio()?;
-        Ok(path.to_path_buf())
+        Ok(path)
     }
 
     // 評価結果を格納--------------------------------------------------------
