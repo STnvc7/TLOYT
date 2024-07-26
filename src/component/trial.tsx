@@ -4,7 +4,6 @@ import { IoIosArrowRoundBack } from "react-icons/io";
 
 import { invoke, convertFileSrc } from "@tauri-apps/api/tauri";
 import { Howl, Howler } from 'howler';
-import { HowlComponent } from 'react-howler';
 
 import "../App.css";
 import { AppContext, TrialContext, TrialProvider } from "./context.tsx";
@@ -28,10 +27,10 @@ const TrialComponent=(): ReactNode =>{
 	// jsx---------------------------------------------------------------
 	return (
 		<div className="flex h-screen">
-			<div className="flex w-1/3 bg-gray-100 p-6">
+			<div className="flex w-2/5 bg-gray-100 p-6">
         <TestAbstract/>
 	    </div>
-	    <div className="flex w-2/3 p-12 justify-center items-center">
+	    <div className="flex w-3/5 p-6 justify-center items-center">
 				<Answer/>
 			</div>
 		</div>
@@ -51,11 +50,11 @@ const TestAbstract=(): ReactNode =>{
 
 	// jsx---------------------------------------------------------------
 	return (
-		<div>
+		<div className="overflow-auto">
 			{isBegan ? (null) : (<BackToHomeButton/>)}
 			<p className="text-xl text-left font-medium text-black">{testName}</p>
 			<p className="text-left text-gray-400 pb-6">{convertTestType(info.test_type)}</p>
-			<p>{info.description}</p>
+			<p className="break-all">{info.description}</p>
 		</div>
 	);
 };
@@ -86,7 +85,7 @@ const Answer=(): ReactNode=>{
 
 	// jsx---------------------------------------------------------------
 	return (
-		<div className="w-full">
+		<div className="w-full justify-center">
 			{isBegan ? (<Score/>):(<ReadyTrial/>)}
 		</div>
 	);
@@ -137,6 +136,7 @@ const ReadyTrial=(): ReactNode=>{
 
 // 回答欄のコンポーネント========================================================
 const Score=(): ReactNode =>{
+	const {testName, examineeName, setExamineeName, info} = useContext(TrialContext);
 	// jsx---------------------------------------------------------------
 	return (
 		<div>
@@ -159,20 +159,30 @@ const MosScore=(): ReactNode=>{
 	const {testName, examineeName, setExamineeName, info} = useContext(TrialContext);
 	const [state, setState] = useState<ScoreState>(ScoreState.Ready);
 	const [count, setCount] = useState<number>(0);
-	const [audio, setAudio] = useState<ReactNode>(null);
+	const [sound, setSound] = useState<Howl>();
 
 	// 音声ファイルをバックエンドから取得してくる-----------------------------
 	const getAudio= async ()=>{
-		await invoke('get_audio').then((path) => {
-			console.log(path);
-			setAudio(<HowlComponent src={path}/>);
+		await invoke('get_audio').then((paths) => {
+			const path = paths[0]
+	    const _sound = new Howl({
+	      src: [convertFileSrc(path)],
+	      onend: () => { setState(ScoreState.Answering); }
+	    });
+	    _sound.play();
+	    setSound(_sound);
 			setState(ScoreState.AudioPlaying);
 		}).catch((err) => console.error(err));
 	};
 
+	// stateが変更されたときの処理----------------------------------
 	useEffect(()=>{
-		if(state==ScoreState.Ready) {
-			getAudio();
+		switch (state) {
+			case ScoreState.Ready:
+				getAudio();
+				break;
+			default:
+				break;
 		}
 	}, [state]);
 
@@ -185,7 +195,7 @@ const MosScore=(): ReactNode=>{
 			const elem = 	
 			(<div key={i} className="p-1 w-1/6 flex flex-col items-center">
         <input type='radio' name='score' value={i+1 as string} defaultChecked={i==2}/>
-        <label htmlFor={i} className="text-center">{label}</label>
+        <label htmlFor={i} className="text-center text-sm">{label}</label>
     	</div>)
     	l.push(elem);
 		}
@@ -194,12 +204,13 @@ const MosScore=(): ReactNode=>{
 
 	// jsx---------------------------------------------------------------
 	return (
-	    <div className="flex flex-col space-y-4 justify-center">
-	    	{audio}
-	    	<ProgressBar time_limit={info.time_limit} state={state} onEnd={setState}/>
-	      <form id="score_form" method="Post" className="pt-6 flex flex-row space-x-2 justify-center">
+	    <div className="flex flex-col space-y-4 items-center">
+	      <form id="score_form" method="Post" className="flex flex-row space-x-4 justify-center">
 	      	{getInput()}
 	      </form>
+	    	<div className="w-2/3">
+			    <ProgressBar time_limit={info.time_limit} state={state} onEnd={setState}/>
+		    </div>
 	    </div>
 	);
 };
@@ -213,6 +224,7 @@ const ProgressBar = (props): ReactNode => {
   const delta: number = 100 * interval / time_limit;
 
   useEffect(() => {
+  	if (props.state != ScoreState.Answering) return;
 
     const intervalId = setInterval(() => {
       setProgress((prevProgress) => {
