@@ -2,6 +2,7 @@ use crate::constants::{TEST_LIST_FILENAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SE
 use crate::test_manager::TestManager;
 use crate::test_manager::{thurstone::ThurstoneManager, mos::MosManager};
 use crate::test_trial::TrialStatus;
+use crate::error::ApplicationError;
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -118,7 +119,7 @@ impl ApplicationManager {
 
         let new_test_name = new_manager.get_name();
         if self.managers.contains_key(&new_test_name) {
-            return Err(anyhow!("This test name has been used"));
+            return Err(anyhow!(ApplicationError::AlreadyUsedTestNameError(new_test_name)));
         }
 
         new_manager.copy_categories()?;
@@ -131,12 +132,15 @@ impl ApplicationManager {
     }
 
     pub fn delete_test(&mut self, test_name: String) -> Result<()> {
+        if self.managers.contains_key(&test_name) == false {
+            return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
+        }
         let test_data_dir = self
             .app_data_root
             .join(TEST_MANAGER_DIRNAME)
             .join(&test_name);
         if test_data_dir.exists() == false {
-            return Err(anyhow!(format!("There is no test named {}", test_name)));
+            return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
         }
         fs::remove_dir_all(test_data_dir)?;
 
@@ -147,6 +151,9 @@ impl ApplicationManager {
     }
 
     pub fn delete_trial(&mut self, test_name: String, examinee: String) -> Result<()> {
+        if self.managers.contains_key(&test_name) == false {
+            return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
+        }
         self.managers
             .get_mut(&test_name)
             .unwrap()
@@ -165,6 +172,9 @@ impl ApplicationManager {
 
     //-------------------------------------------------
     pub fn start_test(&mut self, test_name: String, examinee: String) -> Result<()> {
+        if self.managers.contains_key(&test_name) == false {
+            return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
+        }
         self.managers
             .get_mut(&test_name)
             .unwrap()
@@ -177,6 +187,9 @@ impl ApplicationManager {
     //-------------------------------------------------
     pub fn close_test(&mut self, examinee: String) -> Result<()> {
         let test_name = self.active_test_name.as_mut().unwrap().clone();
+        if self.managers.contains_key(&test_name) == false {
+            return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
+        }
         self.managers
             .get_mut(&test_name)
             .unwrap()
@@ -185,6 +198,9 @@ impl ApplicationManager {
     }
 
     pub fn start_preview(&mut self, test_name: String) -> Result<()> {
+        if self.managers.contains_key(&test_name) == false {
+            return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
+        }
         self.managers
             .get_mut(&test_name)
             .unwrap()
@@ -194,11 +210,17 @@ impl ApplicationManager {
 
     pub fn close_preview(&mut self) -> Result<()> {
         let test_name = self.active_test_name.as_mut().unwrap().clone();
+        if self.managers.contains_key(&test_name) == false {
+            return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
+        }
         self.managers.get_mut(&test_name).unwrap().close_preview()?;
         Ok(())
     }
 
     pub fn edit_test(&mut self, test_name: String, json_string: String) -> Result<()> {
+        if self.managers.contains_key(&test_name) == false {
+            return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
+        }
         self.managers
             .get_mut(&test_name)
             .unwrap()
@@ -209,13 +231,19 @@ impl ApplicationManager {
     //-------------------------------------------------
     pub fn get_audio(&mut self) -> Result<PathBuf> {
         let test_name = self.active_test_name.as_mut().unwrap().clone();
+        if self.managers.contains_key(&test_name) == false {
+            return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
+        }
         let audio_path = self.managers.get_mut(&test_name).unwrap().get_audio()?;
         Ok(audio_path)
     }
 
     //-------------------------------------------------
-    pub fn set_score(&mut self, score: Vec<isize>) -> Result<TrialStatus> {
+    pub fn set_score(&mut self, score: Vec<String>) -> Result<TrialStatus> {
         let test_name = self.active_test_name.as_mut().unwrap().clone();
+        if self.managers.contains_key(&test_name) == false {
+            return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
+        }
         let status = self
             .managers
             .get_mut(&test_name)
@@ -224,11 +252,11 @@ impl ApplicationManager {
         Ok(status)
     }
 
-    pub fn get_settings(&self) -> Result<Vec<(TestType, String)>> {
-        let mut settings: Vec<(TestType, String)> = Vec::new();
-        for (_name, _type) in self.test_list.iter() {
+    pub fn get_settings(&self) -> Result<Vec<String>> {
+        let mut settings: Vec<String> = Vec::new();
+        for (_name, _) in self.test_list.iter() {
             let setting = self.managers.get(_name).unwrap().get_setting()?;
-            settings.push((_type.clone(), setting));
+            settings.push(setting);
         }
         Ok(settings)
     }

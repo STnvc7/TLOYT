@@ -4,7 +4,7 @@ use crate::test_trial::TrialStatus;
 use std::sync::Mutex;
 use tauri::State;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn add_test(
     app_manager: State<Mutex<ApplicationManager>>,
     test_type: TestType,
@@ -17,7 +17,7 @@ pub fn add_test(
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn delete_test(
     app_manager: State<Mutex<ApplicationManager>>,
     test_name: String,
@@ -29,7 +29,7 @@ pub fn delete_test(
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn edit_test(
     app_manager: State<Mutex<ApplicationManager>>,
     test_name: String,
@@ -45,7 +45,7 @@ pub fn edit_test(
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn start_test(
     app_manager: State<Mutex<ApplicationManager>>,
     test_name: String,
@@ -58,7 +58,7 @@ pub fn start_test(
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn close_test(
     app_manager: State<Mutex<ApplicationManager>>,
     examinee: String,
@@ -70,7 +70,7 @@ pub fn close_test(
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn get_audio(
     app_manager: State<Mutex<ApplicationManager>>,
 ) -> Result<String, String> {
@@ -84,10 +84,10 @@ pub fn get_audio(
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn set_score(
     app_manager: State<Mutex<ApplicationManager>>,
-    score: Vec<isize>,
+    score: Vec<String>,
 ) -> Result<TrialStatus, String> {
     let result = app_manager.lock().unwrap().set_score(score);
     match result {
@@ -96,10 +96,10 @@ pub fn set_score(
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn get_settings(
     app_manager: State<Mutex<ApplicationManager>>,
-) -> Result<Vec<(TestType, String)>, String> {
+) -> Result<Vec<String>, String> {
     let result = app_manager.lock().unwrap().get_settings();
     match result {
         Ok(v) => return Ok(v),

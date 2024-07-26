@@ -1,6 +1,7 @@
 use crate::constants::{
     CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME, TRIAL_DIRNAME,
 };
+use crate::app::TestType;
 use crate::test_manager::{Categories, ParticipantStatus, TestManager};
 use crate::test_trial::{mos::MosTrial, TestTrial, TrialStatus};
 use crate::error::ApplicationError;
@@ -35,6 +36,7 @@ struct SetupInfo {
 pub struct MosManager {
     manager_data_root: PathBuf,
     name: String,
+    test_type: TestType,
     author: String,
     created_date: NaiveDate,
     modified_date: NaiveDate,
@@ -153,9 +155,16 @@ impl TestManager for MosManager {
     }
 
     // 評価結果を格納--------------------------------------------------------
-    fn set_score(&mut self, score: Vec<isize>) -> Result<TrialStatus> {
+    fn set_score(&mut self, score: Vec<String>) -> Result<TrialStatus> {
         let trial = self.active_trial.as_mut().unwrap();
-        trial.set_score(score)?;
+        let _score: Result<Vec<isize>, _> = score
+                .into_iter()
+                .map(|s| s.parse::<isize>())
+                .collect();
+        match _score {
+            Ok(n) => { trial.set_score(n)?; },
+            Err(_) => { return Err(anyhow!(ApplicationError::InvalidScoreInputTypeError)) },
+        }
         let status = trial.to_next()?;
         Ok(status)
     }
@@ -205,6 +214,7 @@ impl MosManager {
         MosManager {
             manager_data_root: manager_data_root,
             name: name,
+            test_type: TestType::Mos,
             author: author,
             created_date: created_date,
             modified_date: modified_date,

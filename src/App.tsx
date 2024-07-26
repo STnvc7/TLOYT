@@ -1,16 +1,22 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+
 import { invoke } from "@tauri-apps/api/tauri";
 import "./App.css";
-import Home from "./home.tsx";
-import {AppProvider} from "./context.tsx";
+import {Home} from "./component/home.tsx";
+import {AppProvider} from "./component/context.tsx";
+import {Trial} from "./component/trial.tsx"
 
 function App() {
-
   return (
     <div>
-      <h1 className="p-3 text-3xl text-bold text-black text-center">TLOYT</h1>
       <AppProvider>
-        <Home/>
+      <BrowserRouter>
+      <Routes>
+        <Route path='/' element={<Home/>} />
+        <Route path='/trial/:test' element={<Trial/>} />
+      </Routes>
+      </BrowserRouter>
       </AppProvider>
     </div>
   );

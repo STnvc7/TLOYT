@@ -3,6 +3,10 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ApplicationError {
+    #[error("{0} has already used for test name")]
+    AlreadyUsedTestNameError(String),   
+    #[error("There is no available test: {0}")]
+    UnavailableTestError(String),
     #[error("There is no trial data: {0}")]
     TrialDataNotFoundError(PathBuf),
     #[error("{0} has already taken test")]
@@ -13,4 +17,6 @@ pub enum ApplicationError {
     TestDataNotFoundError(PathBuf),
     #[error("The names of the audio files are not the same between category")]
     DifferentFilenameInCategoryError,
+    #[error("Different type to set score")]
+    InvalidScoreInputTypeError,
 }

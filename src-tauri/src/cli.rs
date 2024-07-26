@@ -19,7 +19,7 @@ pub fn cli_test() -> Result<()> {
         .lock()
         .unwrap()
         .start_test("AB".to_string(), "n_ichi".to_string())?;
-    let scores = vec![0, 1];
+    let scores = vec!["0".to_string(), "1".to_string()];
     loop {
         for _ in 0..=1 {
             let file = app_manager.lock().unwrap().get_audio()?;
@@ -29,7 +29,7 @@ pub fn cli_test() -> Result<()> {
         let status = app_manager
             .lock()
             .unwrap()
-            .set_score(vec![scores[selection]])?;
+            .set_score(vec![scores[selection].clone()])?;
         match status {
             TrialStatus::Done => break,
             _ => {}

@@ -11,21 +11,25 @@
   },
   "tauri": {
     "allowlist": {
-      "all": false,
+      "all": true,
       "shell": {
         "all": false,
         "open": true
+      },
+      "protocol": {
+        "asset": true,
+        "assetScope": [ "**" ]
       }
     },
     "windows": [
       {
         "title": "tloyt",
-        "width": 800,
-        "height": 600
+        "width": 850,
+        "height": 500
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; media-src 'self' asset: https://asset.localhost;"
     },
     "bundle": {
       "active": true,
