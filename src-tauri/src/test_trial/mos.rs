@@ -57,6 +57,7 @@ impl TestTrial for MosTrial {
             self.current_idx += 1;
             return Ok(TrialStatus::Doing);
         } else if self.score_list.len() == (self.current_idx + 1) {
+            self.current_idx += 1;
             return Ok(TrialStatus::Done);
         } else {
             return Err(anyhow!("Test had been ended"));

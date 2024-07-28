@@ -10,7 +10,6 @@ mod test_manager;
 mod test_trial;
 
 use crate::app::ApplicationManager;
-use dirs::data_dir;
 use std::sync::Mutex;
 use tauri::Manager;
 
@@ -18,7 +17,8 @@ fn main() {
 
     tauri::Builder::default()
         .setup(|app| {
-            let app_data_root = data_dir().unwrap().join("TLOYT");
+            // let app_data_root = data_dir().unwrap().join("TLOYT");
+            let app_data_root = app.handle().path_resolver().app_data_dir().unwrap();
             let app_manager_raw = ApplicationManager::setup(app_data_root)?;
             let app_manager = Mutex::new(app_manager_raw);
             app.manage(app_manager);

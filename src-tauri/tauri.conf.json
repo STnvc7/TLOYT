@@ -17,6 +17,7 @@
         "open": true
       },
       "protocol": {
+        "all": true,
         "asset": true,
         "assetScope": [ "**" ]
       }
@@ -25,7 +26,7 @@
       {
         "title": "tloyt",
         "width": 850,
-        "height": 500
+        "height": 400
       }
     ],
     "security": {
@@ -34,7 +35,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.tauri.dev",
+      "identifier": "TLOYT",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",

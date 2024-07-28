@@ -1,5 +1,5 @@
-import { useContext } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useContext, useEffect } from "react";
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import { IoSettingsSharp } from "react-icons/io5";
 import { BsClipboard2Plus } from "react-icons/bs";
@@ -8,14 +8,14 @@ import { PiBeltDuotone } from "react-icons/pi";
 import { invoke } from "@tauri-apps/api/tauri";
 
 import "../App.css";
-
 import { AppContext } from "./context.tsx";
 import { TestComponentButton } from "./button.tsx";
 import { convertTestType } from "./utils.ts";
 
 //=======================================================================
 export const Home = () => {
-  let managers = useContext(AppContext);
+  let {managers, setManagers} = useContext(AppContext);
+  const location = useLocation();
 
   const createTestComponents = () => {
     if (managers === undefined) {
@@ -28,10 +28,18 @@ export const Home = () => {
     return components;
   };
 
+  useEffect(() => {
+    if (location.pathname === '/') {
+      getTestManagers().then((_managers) => {
+        setManagers(_managers);
+      });
+    }
+  }, [location]);
+
   // jsx---------------------------------------------------------------
   return (
     <div>
-      <div className="p-8 pb-10 flex flex-row justify-left items-center">
+      <div className="p-8 pb-10 flex flex-row justify-start items-center">
         <PiBeltDuotone size={30}/>
         <p className="px-3 pr-5 text-2xl text-bold text-black">TLOYT</p>
         <AddTestButton/>

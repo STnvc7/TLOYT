@@ -89,6 +89,7 @@ impl TestTrial for ThurstoneTrial {
             self.current_idx += 1;
             Ok(TrialStatus::Doing)
         } else if self.score_list.len() == (self.current_idx + 1) {
+            self.current_idx += 1;
             Ok(TrialStatus::Done)
         } else {
             Err(anyhow!("Test had been ended"))

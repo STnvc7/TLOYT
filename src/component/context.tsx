@@ -1,33 +1,32 @@
 import { createContext, useState, useEffect, useContext } from 'react';
-import { invoke } from "@tauri-apps/api/tauri";
+
+export const getTestManagers= async() => {
+  let managers = {};
+  await invoke("get_settings").then((settings) => {
+    for (let setting of settings) {
+      let _obj = JSON.parse(setting);
+      let _name = _obj["name"];
+      managers[_name] = _obj;
+    }
+  }).catch((err) => {
+    console.log(err);
+  });
+
+  return managers
+}
 
 export const AppContext = createContext();
-
 export const AppProvider = ({ children }) => {
-
   const [managers, setManagers] = useState(undefined);
 
   useEffect(() => {
-    async function getTests() {
-      try {
-        const settings = await invoke("get_settings");
-        let _managers = {};
-        for (let setting of settings) {
-        	let _obj = JSON.parse(setting);
-        	let _name = _obj["name"];
-        	_managers[_name] = _obj;
-        }
+      getTestManagers().then((_managers) => {
         setManagers(_managers);
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    getTests();
+      });
   }, []);
 
   return (
-    <AppContext.Provider value={managers}>
+    <AppContext.Provider value={{managers, setManagers}}>
       {children}
     </AppContext.Provider>
   );
@@ -35,16 +34,22 @@ export const AppProvider = ({ children }) => {
 
 //===============================================================
 export const TrialContext = createContext();
-
+export enum TrialStatus {
+  Ready,
+  Doing,
+  Finished
+}
 export const TrialProvider = ({children, test}) => {
-  const managers = useContext(AppContext);
+  const {managers, setManagers} = useContext(AppContext);
 
   const [testName, setTestName] = useState(test);
   const [examineeName, setExamineeName] = useState();
   const [info, setInfo] = useState(managers[test]);
+  const [status, setStatus] = useState<TrialStatus>(TrialStatus.Ready);
+  const context = {testName, examineeName, setExamineeName, info, status, setStatus}
 
   return (
-    <TrialContext.Provider value={{testName, examineeName, setExamineeName, info}}>
+    <TrialContext.Provider value={context}>
       {children}
     </TrialContext.Provider>
   );
