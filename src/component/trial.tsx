@@ -143,17 +143,29 @@ const ReadyTrial=(): ReactNode=>{
 // 回答欄のコンポーネント========================================================
 const Score=(): ReactNode =>{
 	const context = useContext(TrialContext);
+
+	const switchScore= ()=> {
+		switch (context.info.test_type) {
+		case "Mos":
+			return <MosScore/>
+		case "Thurstone":
+			return <ThurstoneScore/>
+		default:
+			return null
+		}
+	}
 	// jsx---------------------------------------------------------------
 	return (
 		<div className="justify-center items-center">
-		<MosScore/>
+			{switchScore()}
 		</div>
 	);
 };
 
 // 回答コンポーネントの状態を示す列挙型============================================
-enum ScoreState{
+enum AnswerState{
 	Preparing,
+	Ready,
 	AudioPlaying,
 	Answering,
 	Finished
@@ -162,20 +174,20 @@ enum ScoreState{
 // MOSテストの回答ページ====================================================
 const MosScore=(): ReactNode=>{
 	const context = useContext(TrialContext);
-	const [state, setState] = useState<ScoreState>(ScoreState.Preparing);
+	const [state, setState] = useState<AnswerState>(AnswerState.Preparing);
 	const [count, setCount] = useState<number>(1);
 	const [selectedScore, setSelectedScore] = useState<number>(0);
+	const [sound, setSound] = useState<Howl|null>(null);
 
 	// 音声ファイルをバックエンドから取得してくる-----------------------------
-	const getAudio= async() => {
+	const getSound= async() => {
 		await invoke('get_audio').then((paths) => {
 			const path = paths[0];
-	    const sound = new Howl({
+	    const _sound = new Howl({
 	      src: convertFileSrc(path),
-	      onend: () => { setState(ScoreState.Answering);}
+	      onend: () => { setState(AnswerState.Answering);}
 	    });
-	    sound.play();
-			setState(ScoreState.AudioPlaying);
+	    setSound(_sound);
 		}).catch((err) => console.error(err));
 	};
 
@@ -184,7 +196,7 @@ const MosScore=(): ReactNode=>{
 			switch (result_status) {
 			case "Doing":
 				setCount((prevCount) => prevCount + 1);
-				setState(ScoreState.Preparing);
+				setState(AnswerState.Preparing);
 				break;
 			case "Done":
 				closeTrial();
@@ -202,10 +214,14 @@ const MosScore=(): ReactNode=>{
 	// stateが変更されたときの処理----------------------------------
 	useEffect(()=>{
 		switch (state) {
-			case ScoreState.Preparing:
-				getAudio();
+			case AnswerState.Preparing:
+				getSound().then(()=> setState(AnswerState.Ready));
 				break;
-			case ScoreState.Finished:
+			case AnswerState.Ready:
+				sound.play();
+				setState(AnswerState.AudioPlaying);
+				break;
+			case AnswerState.Finished:
 				setScore();
 				break;
 			default:
@@ -239,16 +255,119 @@ const MosScore=(): ReactNode=>{
 	    	<div className="pb-8 flex flex-row justify-start items-center">
 		    	<p className="pr-8 text-3xl">{count}.</p>
 		    	<PiSpeakerHighFill  size={30} className=
-		    	{state == ScoreState.AudioPlaying ? 
+		    	{state == AnswerState.AudioPlaying ? 
 		    	"animate-pulse text-blue-700" : "opacity-0"}/>
 	    	</div>
 	      <form id="score_form" method="Post" 
-	      className="w-full pb-6 self-center flex flex-row justify-between">
+	      className="w-full pb-12 self-center flex flex-row justify-around">
 	      	{getInput()}
 	      </form>
 	    	<div className="w-full self-center">
 			    <ProgressBar time_limit={context.info.time_limit} state={state}
-			    onEnd={() => setState(ScoreState.Finished)}/>
+			    onEnd={() => setState(AnswerState.Finished)}/>
+		    </div>
+	    </div>
+	);
+};
+
+
+// サーストン法の回答ページ====================================================
+const ThurstoneScore=(): ReactNode=>{
+	const context = useContext(TrialContext);
+	const [state, setState] = useState<AnswerState>(AnswerState.Preparing);
+	const [count, setCount] = useState<number>(1);
+	const [selectedScore, setSelectedScore] = useState<string>("0");
+	const [sound, setSound] = useState<Howl[]>([]);
+	const [ABIndex, setABIndex] = useState<string>('A');
+
+	// 音声ファイルをバックエンドから取得してくる-----------------------------
+	const getSound= async() => {
+		await invoke('get_audio').then((paths) => {
+	    const sound_a = new Howl({
+	      src: convertFileSrc(paths[0]),
+	      onend: () => { setTimeout(()=>{setState(AnswerState.Ready); setABIndex("B");}, 2000);}
+	    });
+	    const sound_b = new Howl({
+	      src: convertFileSrc(paths[1]),
+	      onend: () => { setState(AnswerState.Answering); setABIndex("A");}
+	    });
+	    setSound([sound_a, sound_b]);
+		}).catch((err) => console.error(err));
+	};
+
+	const setScore= async() => {
+		await invoke('set_score', {score: [String(selectedScore)]}).then((result_status) => {
+			switch (result_status) {
+			case "Doing":
+				setCount((prevCount) => prevCount + 1);
+				setState(AnswerState.Preparing);
+				break;
+			case "Done":
+				closeTrial();
+				break;
+			}
+		}).catch((err) => console.error(err));
+	};
+
+	const closeTrial= async() =>{
+		await invoke('close_test', {examinee: context.examineeName}).then(() => {
+			context.setStatus(TrialStatus.Finished);
+		}).catch((err) => console.error(err));
+	}
+
+	// stateが変更されたときの処理----------------------------------
+	useEffect(()=>{
+		switch (state) {
+			case AnswerState.Preparing:
+				getSound().then(()=> setState(AnswerState.Ready));
+				break;
+			case AnswerState.Ready:
+				if (ABIndex === "A") {
+					sound[0].play();
+					setState(AnswerState.AudioPlaying);
+				}
+				else if (ABIndex === "B"){
+					sound[1].play();
+					setState(AnswerState.AudioPlaying);
+				}
+				break;
+			case AnswerState.Finished:
+				setScore();
+				break;
+			default:
+				break;
+		}
+	}, [state]);
+
+	// jsx---------------------------------------------------------------
+	return (
+	    <div>
+	    	<div className="pb-8 text-large text-gray-500">
+	    		受験者：{context.examineeName}
+	    	</div>
+	    	<div className="flex flex-row justify-start items-center">
+		    	<p className="text-3xl">{count}.</p>
+	    	</div>
+	      <form id="score_form" method="Post" 
+	      className="w-full pb-6 self-center flex flex-row justify-around">
+					<div key="A" className="flex flex-col items-center space-y-4">
+						<PiSpeakerHighFill  size={30} className=
+			    	{(state == AnswerState.AudioPlaying) && ABIndex=="A" ? 
+			    	"animate-pulse text-blue-700" : "opacity-0"}/>
+        		<input type='radio' name='score' value="0" onChange={()=>setSelectedScore("0")} defaultChecked/>
+        		<label htmlFor="A" className="text-center text-2xl">A</label>
+    			</div>
+					<div key="B" className="flex flex-col items-center space-y-4">
+						<PiSpeakerHighFill  size={30} className=
+			    	{(state == AnswerState.AudioPlaying) && ABIndex=="B" ? 
+			    	"animate-pulse text-blue-700" : "opacity-0"}/>
+        		<input type='radio' name='score' value="1" onChange={()=>setSelectedScore("1")} />
+        		<label htmlFor="B" className="text-center text-2xl">B</label>
+    			</div>
+	      </form>
+	    	<div className="w-full self-center">
+			    <ProgressBar time_limit={context.info.time_limit} state={state}
+			    onEnd={() => setState(AnswerState.Finished)}/>
 		    </div>
 	    </div>
 	);
@@ -263,7 +382,7 @@ const ProgressBar = (props): ReactNode => {
   const delta: number = 100 * interval / time_limit;
 
   useEffect(() => {
-  	if (props.state != ScoreState.Answering) return;
+  	if (props.state != AnswerState.Answering) return;
 
     const intervalId = setInterval(() => {
       setProgress((prevProgress) => {

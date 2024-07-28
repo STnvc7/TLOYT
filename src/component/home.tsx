@@ -8,7 +8,7 @@ import { PiBeltDuotone } from "react-icons/pi";
 import { invoke } from "@tauri-apps/api/tauri";
 
 import "../App.css";
-import { AppContext } from "./context.tsx";
+import { AppContext, getTestManagers } from "./context.tsx";
 import { TestComponentButton } from "./button.tsx";
 import { convertTestType } from "./utils.ts";
 
