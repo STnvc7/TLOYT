@@ -262,7 +262,8 @@ const MosScore=(): ReactNode=>{
 	      className="w-full pb-12 self-center flex flex-row justify-around">
 	      	{getInput()}
 	      </form>
-	    	<div className="w-full self-center">
+				<div className="w-full self-center border-t-2">
+	    		<p className="py-4">回答時間</p>
 			    <ProgressBar time_limit={context.info.time_limit} state={state}
 			    onEnd={() => setState(AnswerState.Finished)}/>
 		    </div>
@@ -297,14 +298,12 @@ const ThurstoneScore=(): ReactNode=>{
 
 	const setScore= async() => {
 		await invoke('set_score', {score: [String(selectedScore)]}).then((result_status) => {
-			switch (result_status) {
-			case "Doing":
+			if (result_status === "Doing"){
 				setCount((prevCount) => prevCount + 1);
-				setState(AnswerState.Preparing);
-				break;
-			case "Done":
+				setState(AnswerState.Preparing);		
+			}
+			else if (result_status === "Done"){
 				closeTrial();
-				break;
 			}
 		}).catch((err) => console.error(err));
 	};
@@ -365,7 +364,8 @@ const ThurstoneScore=(): ReactNode=>{
         		<label htmlFor="B" className="text-center text-2xl">B</label>
     			</div>
 	      </form>
-	    	<div className="w-full self-center">
+	    	<div className="w-full self-center border-t-2">
+	    		<p className="py-4">回答時間</p>
 			    <ProgressBar time_limit={context.info.time_limit} state={state}
 			    onEnd={() => setState(AnswerState.Finished)}/>
 		    </div>
@@ -414,6 +414,11 @@ const ProgressBar = (props): ReactNode => {
 	    	transition-all ease-in-out"
 	      style={{ width: `${progress}%` }}
 	    ></div>
+	    <div className="pt-2 w-full flex flex-row justify-between">
+		    <p>0 秒</p>
+		    <p>{time_limit / 2000} 秒</p>
+		    <p>{time_limit / 1000} 秒</p>
+		  </div>
     </div>
   );
 };
