@@ -1,22 +1,26 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, FC } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
 
 import { IoSettingsSharp } from "react-icons/io5";
 import { BsClipboard2Plus } from "react-icons/bs";
 import { PiBeltDuotone } from "react-icons/pi";
 
-import { invoke } from "@tauri-apps/api/tauri";
-
 import "../App.css";
-import { AppContext, getTestManagers } from "./context.tsx";
+import { tauriGetSettings } from './tauri_commands.ts';
+import { AppContext } from "./context.tsx";
 import { TestComponentButton } from "./button.tsx";
-import { convertTestType } from "./utils.ts";
 
 //=======================================================================
 export const Home = () => {
-  let {managers, setManagers} = useContext(AppContext);
+  const context = useContext(AppContext);
+  if (context === undefined){
+    return <div>Loading...</div>;
+  }
+  const {managers, setManagers} = context;
+
   const location = useLocation();
 
+  //作成されているテストをバックエンドから取得し，コンポーネントを作成---------
   const createTestComponents = () => {
     if (managers === undefined) {
       return
@@ -28,9 +32,10 @@ export const Home = () => {
     return components;
   };
 
+  //他のページから戻ってきた場合にマネージャを更新する--------------------
   useEffect(() => {
     if (location.pathname === '/') {
-      getTestManagers().then((_managers) => {
+      tauriGetSettings().then((_managers) => {
         setManagers(_managers);
       });
     }
@@ -51,8 +56,24 @@ export const Home = () => {
     );
 };
 
-//=======================================================================
-const TestComponent = (props) => {
+/*=======================================================================
+テスト選択画面の要素
+*/
+export const convertTestType = (test_type: string) : string => {
+  switch (test_type) {
+    case "Mos":
+      return "平均オピニオン評価"
+    case "Thurstone":
+      return "一対比較法(サーストン法)"
+    default:
+      return test_type
+  }
+}
+interface TestComponentProps {
+  name: string;
+  info: {[key: string]: any};
+}
+const TestComponent: FC<TestComponentProps> = (props) => {
   // jsx---------------------------------------------------------------
   return (
     <div className="p-6 bg-white rounded-xl shadow-lg flex-col flex space-y-2">
@@ -89,7 +110,11 @@ const SettingButton=()=>{
   );
 };
 
-const OpenTestButton=(props)=>{
+//テスト選択ボタン=======================================================
+interface OpenTestButtonProps{
+  test: string;
+}
+const OpenTestButton: FC<OpenTestButtonProps> =(props)=>{
   const navigate = useNavigate();
   const openTrial=()=> {
     navigate(`/trial/${props.test}`);

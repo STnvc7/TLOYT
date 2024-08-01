@@ -1,21 +1,31 @@
-import { useContext, useState, useEffect, ReactNode } from 'react';
+import { useContext, useState, useEffect, ReactNode, ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { IoIosArrowRoundBack } from "react-icons/io";
-import { PiSpeakerHighFill } from "react-icons/pi";
 
-import { invoke, convertFileSrc } from "@tauri-apps/api/tauri";
-import { appDataDir, join } from '@tauri-apps/api/path';
-import { Howl, Howler } from 'howler';
+import { invoke } from "@tauri-apps/api/tauri";
 
 import "../App.css";
-import { AppContext, TrialContext, TrialProvider, TrialStatus } from "./context.tsx";
+import { TrialContext, TrialProvider, TrialStatus } from "./context.tsx";
 import { TestComponentButton } from "./button.tsx";
-import { convertTestType } from "./utils.ts";
+import { convertTestType } from "./home.tsx";
+import { Answer } from './answer.tsx';
 
 
-//トライアルを生成するコンポーネント=================================================
-export const Trial=(): ReactNode => {
-	const {test} = useParams();
+
+/*==============================================================
+## TrialProvider----------------------------
+トライアルにおける情報を保存するTrialContextの母体
+TrialContextのメンバ
+- testName（テスト名）
+- examineeeName（受験者）, setExamineeName
+- info（テスト自体の情報(時間制限などを見るため)
+- status（テストの進行状態 Ready, Doing, Finishedのどれか）, setStatus
+*/
+export const Trial=() => {
+	const {test} = useParams(); //URLからテスト名を取得
+	if (test === undefined) {
+		return <div>Loading...</div>;
+	}
 	return (
 		<TrialProvider test={test}>
 			<TrialComponent/>
@@ -24,25 +34,33 @@ export const Trial=(): ReactNode => {
 };
 
 
-//トライアル==================================================================
-const TrialComponent=(): ReactNode =>{
+/*==================================================================
+テスト画面のコンポーネント．画面を横に分けて左側にテストの概要を表示，右側で回答
+*/
+const TrialComponent=() =>{
 	// jsx---------------------------------------------------------------
 	return (
 		<div className="flex h-screen">
 			<div className="flex w-2/5 bg-gray-100 p-8">
-        <TestAbstract/>
-	    </div>
-	    <div className="flex w-3/5 p-8 items-center">
-				<Answer/>
+				<TestAbstract/>
+			</div>
+			<div className="flex w-3/5 p-8 items-center">
+				<AnswerComponent/>
 			</div>
 		</div>
 	);
 };
 
 
-//テストの概要を表示するコンポーネント==============================================
-const TestAbstract=(): ReactNode =>{
+/*=======================================================================
+テスト名，テストの種類，テストの説明を表示する
+テストが始まっていなければ，戻るボタンを表示しておく
+*/
+const TestAbstract=() =>{
 	const context = useContext(TrialContext);
+	if (context === undefined){
+		return null
+	}
 	// jsx---------------------------------------------------------------
 	return (
 		<div className="overflow-auto">
@@ -55,7 +73,7 @@ const TestAbstract=(): ReactNode =>{
 };
 
 // ホームに戻る矢印のボタン======================================================
-const BackToHomeButton=(): ReactNode =>{
+const BackToHomeButton=()=>{
   const navigate = useNavigate();
   const backToHome=()=>{
     navigate('/');
@@ -68,17 +86,24 @@ const BackToHomeButton=(): ReactNode =>{
   );
 }
 
-//実際に回答をおこなうコンポーネント================================================
-//最初の画面で受験者を選択し，テストを開始する
-const Answer=(): ReactNode=>{
+/*===================================================================
+回答欄のコンポーネント
+テストが始まっていない		-> 受験者の選択画面を表示
+テスト中							-> 回答欄を表示
+テストが終了					-> 協力ありがとうございましたの画面
+*/
+const AnswerComponent=()=>{
 	const context = useContext(TrialContext);
+	if (context === undefined){
+		return null;
+	}
 
 	const elem = () => {
 		switch (context.status) {
 		case TrialStatus.Ready:
 			return <ReadyTrial/>
 		case TrialStatus.Doing:
-			return <Score/>
+			return <Answer/>
 		case TrialStatus.Finished:
 			return (
 				<div className="text-center text-bold text-lg">
@@ -96,9 +121,15 @@ const Answer=(): ReactNode=>{
 	);
 };
 
-// 受験者を選択するコンポーネント=================================================
-const ReadyTrial=(): ReactNode=>{
+/*=======================================================================
+受験者を選択するコンポーネント
+セレクタから受験者を選択し，テスト開始ボタンが押されるとテストが開始される
+*/
+const ReadyTrial=()=>{
 	const context = useContext(TrialContext);
+	if (context === undefined){
+		return null
+	}
 	const [selectedExaminee, setSelectedExaminee] = useState<string>();
 	const [option, setOption] = useState<ReactNode[]>();
 
@@ -111,7 +142,7 @@ const ReadyTrial=(): ReactNode=>{
 		setOption(l);
 	}, []);
 
-	const handleSelectChange = (event) => {
+	const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
 	    setSelectedExaminee(event.target.value);
 	};
 
@@ -138,287 +169,4 @@ const ReadyTrial=(): ReactNode=>{
 			<TestComponentButton text="テストを開始" onClick={startTrial}/>
 		</div>
 	);
-};
-
-// 回答欄のコンポーネント========================================================
-const Score=(): ReactNode =>{
-	const context = useContext(TrialContext);
-
-	const switchScore= ()=> {
-		switch (context.info.test_type) {
-		case "Mos":
-			return <MosScore/>
-		case "Thurstone":
-			return <ThurstoneScore/>
-		default:
-			return null
-		}
-	}
-	// jsx---------------------------------------------------------------
-	return (
-		<div className="justify-center items-center">
-			{switchScore()}
-		</div>
-	);
-};
-
-// 回答コンポーネントの状態を示す列挙型============================================
-enum AnswerState{
-	Preparing,
-	Ready,
-	AudioPlaying,
-	Answering,
-	Finished
-}
-
-// MOSテストの回答ページ====================================================
-const MosScore=(): ReactNode=>{
-	const context = useContext(TrialContext);
-	const [state, setState] = useState<AnswerState>(AnswerState.Preparing);
-	const [count, setCount] = useState<number>(1);
-	const [selectedScore, setSelectedScore] = useState<number>(0);
-	const [sound, setSound] = useState<Howl|null>(null);
-
-	// 音声ファイルをバックエンドから取得してくる-----------------------------
-	const getSound= async() => {
-		await invoke('get_audio').then((paths) => {
-			const path = paths[0];
-	    const _sound = new Howl({
-	      src: convertFileSrc(path),
-	      onend: () => { setState(AnswerState.Answering);}
-	    });
-	    setSound(_sound);
-		}).catch((err) => console.error(err));
-	};
-
-	const setScore= async() => {
-		await invoke('set_score', {score: [String(selectedScore)]}).then((result_status) => {
-			switch (result_status) {
-			case "Doing":
-				setCount((prevCount) => prevCount + 1);
-				setState(AnswerState.Preparing);
-				break;
-			case "Done":
-				closeTrial();
-				break;
-			}
-		}).catch((err) => console.error(err));
-	};
-
-	const closeTrial= async() =>{
-		await invoke('close_test', {examinee: context.examineeName}).then(() => {
-			context.setStatus(TrialStatus.Finished);
-		}).catch((err) => console.error(err));
-	}
-
-	// stateが変更されたときの処理----------------------------------
-	useEffect(()=>{
-		switch (state) {
-			case AnswerState.Preparing:
-				getSound().then(()=> setState(AnswerState.Ready));
-				break;
-			case AnswerState.Ready:
-				sound.play();
-				setState(AnswerState.AudioPlaying);
-				break;
-			case AnswerState.Finished:
-				setScore();
-				break;
-			default:
-				break;
-		}
-	}, [state]);
-
-	// 回答のラジオボタンの要素を作成--------------------------------------------
-	const getInput=(): ReactNode[] =>{
-		const label_list: string[] = ["非常に悪い", "悪い", "普通", "良い", "非常に良い"];
-
-		let l: ReactNode[] = [];
-		for (let [i, label] of label_list.entries()){
-			const elem = 	
-			(<div key={i} className="flex flex-col items-center">
-        <input type='radio' name='score' value={i+1}
-        defaultChecked={i===2} onChange={() => setSelectedScore(i+1)} />
-        <label htmlFor={i} className="text-center">{label}</label>
-    	</div>)
-    	l.push(elem);
-		}
-		return l
-	}
-
-	// jsx---------------------------------------------------------------
-	return (
-	    <div>
-	    	<div className="pb-8 text-large text-gray-500">
-	    		受験者：{context.examineeName}
-	    	</div>
-	    	<div className="pb-8 flex flex-row justify-start items-center">
-		    	<p className="pr-8 text-3xl">{count}.</p>
-		    	<PiSpeakerHighFill  size={30} className=
-		    	{state == AnswerState.AudioPlaying ? 
-		    	"animate-pulse text-blue-700" : "opacity-0"}/>
-	    	</div>
-	      <form id="score_form" method="Post" 
-	      className="w-full pb-12 self-center flex flex-row justify-around">
-	      	{getInput()}
-	      </form>
-				<div className="w-full self-center border-t-2">
-	    		<p className="py-4">回答時間</p>
-			    <ProgressBar time_limit={context.info.time_limit} state={state}
-			    onEnd={() => setState(AnswerState.Finished)}/>
-		    </div>
-	    </div>
-	);
-};
-
-
-// サーストン法の回答ページ====================================================
-const ThurstoneScore=(): ReactNode=>{
-	const context = useContext(TrialContext);
-	const [state, setState] = useState<AnswerState>(AnswerState.Preparing);
-	const [count, setCount] = useState<number>(1);
-	const [selectedScore, setSelectedScore] = useState<string>("0");
-	const [sound, setSound] = useState<Howl[]>([]);
-	const [ABIndex, setABIndex] = useState<string>('A');
-
-	// 音声ファイルをバックエンドから取得してくる-----------------------------
-	const getSound= async() => {
-		await invoke('get_audio').then((paths) => {
-	    const sound_a = new Howl({
-	      src: convertFileSrc(paths[0]),
-	      onend: () => { setTimeout(()=>{setState(AnswerState.Ready); setABIndex("B");}, 2000);}
-	    });
-	    const sound_b = new Howl({
-	      src: convertFileSrc(paths[1]),
-	      onend: () => { setState(AnswerState.Answering); setABIndex("A");}
-	    });
-	    setSound([sound_a, sound_b]);
-		}).catch((err) => console.error(err));
-	};
-
-	const setScore= async() => {
-		await invoke('set_score', {score: [String(selectedScore)]}).then((result_status) => {
-			if (result_status === "Doing"){
-				setCount((prevCount) => prevCount + 1);
-				setState(AnswerState.Preparing);		
-			}
-			else if (result_status === "Done"){
-				closeTrial();
-			}
-		}).catch((err) => console.error(err));
-	};
-
-	const closeTrial= async() =>{
-		await invoke('close_test', {examinee: context.examineeName}).then(() => {
-			context.setStatus(TrialStatus.Finished);
-		}).catch((err) => console.error(err));
-	}
-
-	// stateが変更されたときの処理----------------------------------
-	useEffect(()=>{
-		switch (state) {
-			case AnswerState.Preparing:
-				getSound().then(()=> setState(AnswerState.Ready));
-				break;
-			case AnswerState.Ready:
-				if (ABIndex === "A") {
-					sound[0].play();
-					setState(AnswerState.AudioPlaying);
-				}
-				else if (ABIndex === "B"){
-					sound[1].play();
-					setState(AnswerState.AudioPlaying);
-				}
-				break;
-			case AnswerState.Finished:
-				setScore();
-				break;
-			default:
-				break;
-		}
-	}, [state]);
-
-	// jsx---------------------------------------------------------------
-	return (
-	    <div>
-	    	<div className="pb-8 text-large text-gray-500">
-	    		受験者：{context.examineeName}
-	    	</div>
-	    	<div className="flex flex-row justify-start items-center">
-		    	<p className="text-3xl">{count}.</p>
-	    	</div>
-	      <form id="score_form" method="Post" 
-	      className="w-full pb-6 self-center flex flex-row justify-around">
-					<div key="A" className="flex flex-col items-center space-y-4">
-						<PiSpeakerHighFill  size={30} className=
-			    	{(state == AnswerState.AudioPlaying) && ABIndex=="A" ? 
-			    	"animate-pulse text-blue-700" : "opacity-0"}/>
-        		<input type='radio' name='score' value="0" onChange={()=>setSelectedScore("0")} defaultChecked/>
-        		<label htmlFor="A" className="text-center text-2xl">A</label>
-    			</div>
-					<div key="B" className="flex flex-col items-center space-y-4">
-						<PiSpeakerHighFill  size={30} className=
-			    	{(state == AnswerState.AudioPlaying) && ABIndex=="B" ? 
-			    	"animate-pulse text-blue-700" : "opacity-0"}/>
-        		<input type='radio' name='score' value="1" onChange={()=>setSelectedScore("1")} />
-        		<label htmlFor="B" className="text-center text-2xl">B</label>
-    			</div>
-	      </form>
-	    	<div className="w-full self-center border-t-2">
-	    		<p className="py-4">回答時間</p>
-			    <ProgressBar time_limit={context.info.time_limit} state={state}
-			    onEnd={() => setState(AnswerState.Finished)}/>
-		    </div>
-	    </div>
-	);
-};
-
-
-// 制限時間のプログレスバー=======================================================
-const ProgressBar = (props): ReactNode => {
-  const [progress, setProgress] = useState(0);
-  const interval: number = 100;
-  const time_limit: number = props.time_limit * 1000;
-  const delta: number = 100 * interval / time_limit;
-
-  useEffect(() => {
-  	if (props.state != AnswerState.Answering) return;
-
-    const intervalId = setInterval(() => {
-      setProgress((prevProgress) => {
-        if (prevProgress >= 100) {
-          clearInterval(intervalId);
-          return 100;
-        }
-        return prevProgress + delta;
-      });
-    }, interval);
-
-    // クリーンアップ関数でタイマーをクリア
-    return () => {
-    	clearInterval(intervalId);
-    }
-  }, [props.state]);
-
-  useEffect(() => {
-	  if (progress === 100) {
-    	setProgress(0);
-    	props.onEnd();
-    }
-  }, [progress]);
-
-  return (
-  	<div className='relative h-2 w-full'>
-	    <div className="absolute top-0 left-0 h-full w-full rounded-lg bg-gray-300"></div>
-	    <div className="absolute top-0 left-0 h-full rounded-lg bg-blue-500 
-	    	transition-all ease-in-out"
-	      style={{ width: `${progress}%` }}
-	    ></div>
-	    <div className="pt-2 w-full flex flex-row justify-between">
-		    <p>0 秒</p>
-		    <p>{time_limit / 2000} 秒</p>
-		    <p>{time_limit / 1000} 秒</p>
-		  </div>
-    </div>
-  );
 };
