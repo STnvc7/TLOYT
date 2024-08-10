@@ -1,4 +1,5 @@
 use crate::constants::{CATEGORIES_DIRNAME, TRIAL_DIRNAME};
+use crate::error::ApplicationError;
 use crate::test_manager::Categories;
 use crate::test_trial::{TestTrial, TrialStatus};
 
@@ -67,17 +68,17 @@ impl TestTrial for ThurstoneTrial {
         let audio_paths = self.score_list[self.current_idx].get_audio_file_path();
         Ok(audio_paths)
     }
-    fn set_score(&mut self, score: Vec<isize>) -> Result<()> {
+    fn set_score(&mut self, score: Vec<String>) -> Result<()> {
         let ab_score: ABIndex;
-        match score[0] {
-            0 => {
+        match score[0].as_str() {
+            "A" => {
                 ab_score = ABIndex::A;
             }
-            1 => {
+            "B" => {
                 ab_score = ABIndex::B;
             }
             _ => {
-                return Err(anyhow!("Invalid score for ABThurstone Test"));
+                return Err(anyhow!(ApplicationError::InvalidScoreInputTypeError));
             }
         }
 

@@ -6,7 +6,7 @@ use dialoguer::Select;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-#[allow(unused_imports, dead_code)]
+#[allow(dead_code)]
 pub fn cli_test() -> Result<()> {
     let manager =
         ApplicationManager::setup(PathBuf::from("C:\\Users\\hiroh\\AppData\\Roaming\\TLOYT"))?;

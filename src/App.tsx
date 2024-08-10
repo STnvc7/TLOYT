@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
-import { invoke } from "@tauri-apps/api/tauri";
 import "./App.css";
 import {Home} from "./component/home.tsx";
 import {AppProvider} from "./component/context.tsx";

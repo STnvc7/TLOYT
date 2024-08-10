@@ -1,5 +1,15 @@
 import { invoke } from "@tauri-apps/api/tauri";
 
+export type tauriTestType = "Mos" | "Thurstone";
+export const testTypeToString = (testType: tauriTestType): string => {
+    switch (testType) {
+        case "Mos":
+            return "平均オピニオン評価"
+        case "Thurstone":
+            return "一対比較法(サーストン法)"
+      }
+}
+
 //テストマネージャをバックエンドから取得する関数================================
 export const tauriGetSettings = async (): Promise<{ [key: string]: any }> => {
     let managers: { [key: string]: any } = {};
@@ -16,6 +26,14 @@ export const tauriGetSettings = async (): Promise<{ [key: string]: any }> => {
   
     return managers;
 };
+
+export const tauriAddTest = async (test_type: tauriTestType, json_string: string): Promise<void> => {
+    try {
+        await invoke("add_test", {test_type: test_type, json_string: json_string});
+    } catch (err) {
+        console.error(err);
+    }
+}
 
 export const tauriGetAudio = async (): Promise<string[]> => {
     try {

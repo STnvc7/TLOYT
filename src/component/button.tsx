@@ -1,11 +1,18 @@
 import "../App.css";
+import { FC } from 'react';
 
 //=======================================================================
-export const TestComponentButton=(props)=>{
+interface TestComponentButtonProps {
+  text: string;
+  className?: string;
+  type?: "button" | "submit" | "reset" | undefined;
+  onClick?: () => void; 
+}
+export const TestComponentButton: FC<TestComponentButtonProps> =(props)=>{
+  let buttonStyle = "bg-blue-500 hover:bg-blue-700 transition duration-500 text-white shadow-lg rounded-lg " + props.className;
   return (
-        <button type={props.type} onClick={props.onClick} className="
-          bg-blue-500 hover:bg-blue-700 transition duration-500
-          text-white font-bold py-2 px-4 shadow-lg rounded-lg">
-        {props.text}</button>
+        <button type={props.type} onClick={props.onClick} className={buttonStyle}>
+        {props.text}
+        </button>
   );
 };

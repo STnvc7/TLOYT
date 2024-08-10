@@ -48,8 +48,9 @@ impl TestTrial for MosTrial {
         let audio_path = self.score_list[self.current_idx].get_audio_file_path();
         Ok(vec![audio_path])
     }
-    fn set_score(&mut self, score: Vec<isize>) -> Result<()> {
-        self.score_list[self.current_idx].set_score(score[0]);
+    fn set_score(&mut self, score: Vec<String>) -> Result<()> {
+        let _score = score[0].parse::<isize>()?;
+        self.score_list[self.current_idx].set_score(_score);
         Ok(())
     }
     fn to_next(&mut self) -> Result<TrialStatus> {

@@ -1,14 +1,13 @@
 import { useContext, useState, useEffect, ReactNode, ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { IoIosArrowRoundBack } from "react-icons/io";
-
 import { invoke } from "@tauri-apps/api/tauri";
 
 import "../App.css";
 import { TrialContext, TrialProvider, TrialStatus } from "./context.tsx";
 import { TestComponentButton } from "./button.tsx";
-import { convertTestType } from "./home.tsx";
 import { Answer } from './answer.tsx';
+import { testTypeToString } from './tauri_commands.ts';
 
 
 
@@ -24,7 +23,7 @@ TrialContextのメンバ
 export const Trial=() => {
 	const {test} = useParams(); //URLからテスト名を取得
 	if (test === undefined) {
-		return <div>Loading...</div>;
+		return null
 	}
 	return (
 		<TrialProvider test={test}>
@@ -57,17 +56,17 @@ const TrialComponent=() =>{
 テストが始まっていなければ，戻るボタンを表示しておく
 */
 const TestAbstract=() =>{
-	const context = useContext(TrialContext);
-	if (context === undefined){
+	const trialContext = useContext(TrialContext);
+	if (trialContext === undefined){
 		return null
 	}
 	// jsx---------------------------------------------------------------
 	return (
 		<div className="overflow-auto">
-			{context.status!=TrialStatus.Doing ? (<BackToHomeButton/>) : (null)}
-			<p className="text-xl text-left font-medium text-black">{context.testName}</p>
-			<p className="text-left text-gray-400 pb-6">{convertTestType(context.info.test_type)}</p>
-			<p className="break-all">{context.info.description}</p>
+			{trialContext.status!=TrialStatus.Doing ? (<BackToHomeButton/>) : (null)}
+			<p className="text-xl text-left font-medium text-black">{trialContext.testName}</p>
+			<p className="text-left text-gray-400 pb-6">{testTypeToString(trialContext.info.test_type)}</p>
+			<p className="break-all">{trialContext.info.description}</p>
 		</div>
 	);
 };
@@ -93,13 +92,13 @@ const BackToHomeButton=()=>{
 テストが終了					-> 協力ありがとうございましたの画面
 */
 const AnswerComponent=()=>{
-	const context = useContext(TrialContext);
-	if (context === undefined){
+	const trialContext = useContext(TrialContext);
+	if (trialContext === undefined){
 		return null;
 	}
 
 	const elem = () => {
-		switch (context.status) {
+		switch (trialContext.status) {
 		case TrialStatus.Ready:
 			return <ReadyTrial/>
 		case TrialStatus.Doing:
@@ -126,21 +125,20 @@ const AnswerComponent=()=>{
 セレクタから受験者を選択し，テスト開始ボタンが押されるとテストが開始される
 */
 const ReadyTrial=()=>{
-	const context = useContext(TrialContext);
-	if (context === undefined){
+	const trialContext = useContext(TrialContext);
+	if (trialContext === undefined){
 		return null
 	}
 	const [selectedExaminee, setSelectedExaminee] = useState<string>();
-	const [option, setOption] = useState<ReactNode[]>();
 
 	// 受験者を選択するセレクタのオプションとなるReactNodeのリストを生成---------------
-	useEffect(()=>{
+	const getParticipantOption = ()=>{
 		let l: ReactNode[] = [<option key="" value="">受験者を選択</option>]
-		for (let [name, status] of Object.entries(context.info.participants)) {
+		for (let [name, status] of Object.entries(trialContext.info.participants)) {
 			if (status!='Done') l.push(<option key={name} value={name}>{name}</option>);
 		}
-		setOption(l);
-	}, []);
+		return l
+	};
 
 	const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
 	    setSelectedExaminee(event.target.value);
@@ -149,10 +147,10 @@ const ReadyTrial=()=>{
 	// テストを開始する----------------------------------------------------
 	const startTrial= async ()=>{
 	    if (selectedExaminee) {
-	      await invoke("start_test", {test_name: context.testName, examinee: selectedExaminee })
+	      await invoke("start_test", {test_name: trialContext.testName, examinee: selectedExaminee })
 	      .catch(err => console.error("Error invoking start_test:", err));
-	      context.setExamineeName(selectedExaminee);
-	      context.setStatus(TrialStatus.Doing);
+	      trialContext.setExamineeName(selectedExaminee);
+	      trialContext.setStatus(TrialStatus.Doing);
 	    } else {
 	      alert("受験者を選択してください");
 	    }
@@ -164,7 +162,7 @@ const ReadyTrial=()=>{
 			<select name="examinee" id="examinee-select"
 			onChange={handleSelectChange} value={selectedExaminee}
 			className="px-3 border-2 rounded-lg">
-			  {option}
+			  {getParticipantOption()}
 			</select>
 			<TestComponentButton text="テストを開始" onClick={startTrial}/>
 		</div>

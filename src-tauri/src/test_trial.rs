@@ -20,7 +20,7 @@ pub enum TrialStatus {
 #[allow(dead_code)]
 pub trait TestTrial {
     fn get_audio(&mut self) -> Result<Vec<PathBuf>>;
-    fn set_score(&mut self, score: Vec<isize>) -> Result<()>;
+    fn set_score(&mut self, score: Vec<String>) -> Result<()>;
     fn to_next(&mut self) -> Result<TrialStatus>;
     fn save_result(&self) -> Result<()>;
 }

@@ -157,14 +157,7 @@ impl TestManager for MosManager {
     // 評価結果を格納--------------------------------------------------------
     fn set_score(&mut self, score: Vec<String>) -> Result<TrialStatus> {
         let trial = self.active_trial.as_mut().unwrap();
-        let _score: Result<Vec<isize>, _> = score
-                .into_iter()
-                .map(|s| s.parse::<isize>())
-                .collect();
-        match _score {
-            Ok(n) => { trial.set_score(n)?; },
-            Err(_) => { return Err(anyhow!(ApplicationError::InvalidScoreInputTypeError)) },
-        }
+        trial.set_score(score)?;
         let status = trial.to_next()?;
         Ok(status)
     }
