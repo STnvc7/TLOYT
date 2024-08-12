@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState, FC, ReactNode } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useForm, UseFormRegister } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { IoSettingsSharp } from "react-icons/io5";
 import { BsClipboard2Plus } from "react-icons/bs";
 import { PiBeltDuotone } from "react-icons/pi";
@@ -8,7 +8,7 @@ import { PiBeltDuotone } from "react-icons/pi";
 import "../App.css";
 import { tauriGetSettings, tauriTestType, testTypeToString, tauriAddTest } from './tauri_commands.ts';
 import { AppContext } from "./context.tsx";
-import { TestComponentButton } from "./button.tsx";
+import { TestComponentButton, RemoveButton } from "./button.tsx";
 
 import { open } from '@tauri-apps/api/dialog';
 import { basename } from '@tauri-apps/api/path';
@@ -134,34 +134,82 @@ interface AddTestModalProps {
 }
 const AddTestModal: FC<AddTestModalProps> =()=>{
   const [testType, setTestType] = useState<tauriTestType>("Mos");
-  const [category, setCategory] = useState<[string, string][]>([]);
+  const [categories, setCategories] = useState<[string, string][]>([]);
   const [participants, setParticipants] = useState<string[]>([]);
+
   const [currentParticipant, setCurrentParticipant] = useState<string>('');
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<SetupInfo>();
+
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SetupInfo>();
 
   const inputStyle = "w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg px-2 py-1";
   const labelStyle = "block text-sm font-medium text-gray-900";
 
+  // カテゴリの選択----------------------------------------------------------------------------------------
   const categoryInput= ()=> {
+    //追加したカテゴリのリストを表示-------------------------------------------------
+    const categoryList= ()=> {
+      let l: ReactNode[] = [];
+      for (let [i, category] of Object.entries(categories)) {
+        l.push((
+          <div key={i}>
+            <p className="text-xs">{category[1]}</p>
+            <div className="flex flex-row space-x-2 justify-between">
+              <input type="text" defaultValue={category[0]} className={inputStyle + ' w-10/12 text-sm'} 
+              onChange={(e) => changeCategoryName(Number(i), e.target.value)}/>
+              <RemoveButton text='削除' className='w-2/12 text-sm' type='button' 
+              onClick={() => {removeCategory(Number(i))}}/>
+            </div>
+          </div>
+        ))
+      }
+      return l
+    }
+
+    const setCategoriesForm= (newCategories: [string, string][])=> {
+      setCategories(newCategories);
+      setValue("categories", newCategories);
+    }
+
+    //カテゴリの名前を変更---------------------------------------------------------
+    const changeCategoryName= (index: number, newName: string)=> {
+      const updatedCategories: [string, string][] = categories.map((category, i) => 
+        i === index ? [newName, category[1]] : category
+      );
+      setCategoriesForm(updatedCategories);
+    }
+
+    //カテゴリを削除---------------------------------------------------------------
+    const removeCategory= (index: number)=> {
+      const newCategories = categories.filter((_, i) => i !== index);
+      setCategoriesForm(newCategories);
+    }
+    //ファイルダイアログを開く----------------------------------------------------
+    const openDialoge= async() => {
+      const path = await open({directory: true})
+      if (typeof(path) !== 'string' ) return;
+      if (path === '') return;
+      if (categories.some(([_name, _path]) => _path.includes(path) )){
+        alert('カテゴリが重複しています');
+        return
+      }
+      const name = await basename(path);
+      setCategoriesForm([...categories, [name, path]]);
+    }
+    // jsx------------------------------------------------------------------------
     return (
-      <div className="flex flex-row space-x-2">
-        <p className={labelStyle}>カテゴリ</p>
-        <TestComponentButton text='選択' className="text-sm px-1"
-          onClick={async () => {
-            const path = await open({directory: true})
-            if (typeof(path) !== 'string' ) return;
-            const name = await basename(path);
-            setCategory([...category, [name, path]]);
-            console.log(category);
-          }}
-        />
+      <div>
+        <div className="flex flex-row space-x-2">
+          <p className={labelStyle}>カテゴリ</p>
+          <TestComponentButton text='選択' className="text-sm px-1"
+            onClick={openDialoge}/>
+        </div>
+        {categoryList()}
       </div>
     )
   }
 
   // 参加者を追加するコンポーネント--------------------------------------------------------
   const participantsInput =()=> {
-
     //追加された参加者のリストを表示するReact Node---------------------------------
     const getParticipantsList =() => {
       if (participants === undefined) return null
@@ -170,17 +218,21 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
         l.push(
           <div key={i} className="flex flex-row space-x-4 place-items-center justify-between">
             <li>{participant}</li>
-            <button type='button' className='text-red-700 rounded-md w-2/12 text-sm shadow-sm'
-            onClick={() => removeParticipants(Number(i))}>削除</button>
+            <RemoveButton text='削除' type='button' className="w-2/12 text-sm" 
+            onClick={() => removeParticipants(Number(i))}/>
           </div>
         )
       }
       return l
     };
+    const setParticipantsForm= (newParticipants: string[])=> {
+      setParticipants(newParticipants);
+      setValue("participants", newParticipants);
+    }
     // 参加者を削除--------------------------------------------------------------
     const removeParticipants= (index: number)=> {
       const newParticipants = participants.filter((_, i) => i !== index);
-      setParticipants(newParticipants);
+      setParticipantsForm(newParticipants);
     }
 
     //参加者を追加-------------------------------------------------------------
@@ -193,7 +245,7 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
         alert('参加者名が重複しています');
         return
       }
-      setParticipants([...participants, currentParticipant]);
+      setParticipantsForm([...participants, currentParticipant]);
       setCurrentParticipant('');
     };
 
@@ -211,11 +263,12 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
     )
   }
 
-  // フォームを作成-----------------------------------------------------------------
+  // フォームを作るコンポーネント-----------------------------------------------------------------
   const FormComponent = (testWiseElement: ReactNode) => {
     return (
-      <div className="w-full flex flex-row space-x-4">
-        <div className="w-1/2 flex flex-col space-y-2">
+      <form id="setup" className="w-full flex flex-row space-x-4" onSubmit={handleSubmit(onSubmit)}>
+        {/* 左側--------------------------------------------------------------- */}
+        <div className="w-1/2 flex flex-col space-y-4">
           <div>
             <p className={labelStyle}>テスト名</p>
             <input type="text" className={inputStyle} {...register("name", { required: true })}/>
@@ -226,19 +279,24 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
           </div>
           <div>
             <p className={labelStyle}>説明</p>
-            <textarea className={inputStyle} {...register("description", { required: true })}/>
+            <textarea className={inputStyle} rows={6} {...register("description", { required: true })}/>
           </div>
         </div>
-        <div className="w-1/2  flex flex-col space-y-2">
+        <div className="w-1/2  flex flex-col space-y-4">
           {categoryInput()}
           {participantsInput()}
           {testWiseElement}
         </div>
-      </div>
+      </form>
     );
   };
 
-  //テストタイプに応じてセットアップフォームの内容を変える---------------------------
+  //
+    const onSubmit: SubmitHandler<SetupInfo> = (data)=> {
+      console.log(data);
+    };
+
+  //テストタイプに応じてセットアップフォームを作成---------------------------
   const createForm = (): ReactNode => {
     switch(testType) {
       case "Mos": {
@@ -270,24 +328,17 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
     )
   }
 
-  //
-  const onSubmit = ()=> {
-
-  };
-
   //jsx--------------------------------------------------------------------------
   return (
     <div className="fixed inset-0 z-40 bg-[rgb(0_0_0/0.6)] flex justify-center">
       <div className="w-5/6 my-5 bg-white p-5 rounded-lg overflow-auto">
-        <form className="flex flex-col space-y-2 items-center" onSubmit={handleSubmit(onSubmit)}>
+        <div className='flex flex-row justify-between place-items-center pb-4 border-b-4'>
           <TestTypeSelector/>
-          <div className="pt-5 w-full">
-            {createForm()}
-          </div>
-          <div className="pt-2">
-            <TestComponentButton text='作成' type='submit' className="py-1 px-4 font-bold"/>
-          </div>
-        </form>
+          <TestComponentButton text='作成' type='submit' className="py-2 px-4 font-bold" form="setup"/>
+        </div>
+        <div className='pt-6'>
+          {createForm()}
+        </div>
       </div>
     </div>
   );
