@@ -3,6 +3,7 @@ use crate::test_manager::TestManager;
 use crate::test_manager::{thurstone::ThurstoneManager, mos::MosManager};
 use crate::test_trial::TrialStatus;
 use crate::error::ApplicationError;
+use log::info;
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -45,14 +46,18 @@ impl ApplicationManager {
 
         let test_list_path = app_data_root.join(TEST_LIST_FILENAME);
         if test_list_path.exists() {
+            info!("load test managers from test list");
             let json_string = fs::read_to_string(test_list_path)?;
             test_list = serde_json::from_str(&json_string)?;
             managers = ApplicationManager::load(&test_list, app_data_root.clone())?;
         } else {
+            info!("create new test list");
             ApplicationManager::init(app_data_root.clone())?;
             test_list = HashMap::new();
             managers = HashMap::new();
         }
+
+        info!("Application setup is complete");
 
         Ok(ApplicationManager {
             managers: managers,
@@ -77,8 +82,10 @@ impl ApplicationManager {
                 .join(TEST_MANAGER_SETTING_FILENAME);
             let manager =
                 ApplicationManager::load_test_from_json(t_type.clone(), manager_json_path)?;
+            info!("test loaded : {}", t_name);
             managers.insert(t_name.clone(), manager);
         }
+        info!("All tests have been loaded");
         return Ok(managers);
     }
 
@@ -101,8 +108,9 @@ impl ApplicationManager {
 
         let test_list: HashMap<String, TestType> = HashMap::new();
         let json_string = serde_json::to_string_pretty(&test_list)?;
-        let mut file = File::create(test_list_path)?;
+        let mut file = File::create(&test_list_path)?;
         file.write_all(json_string.as_bytes())?;
+        info!("created new test list file : {:?}", test_list_path);
 
         Ok(())
     }

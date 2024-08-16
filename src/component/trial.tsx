@@ -164,7 +164,7 @@ const ReadyTrial=()=>{
 			className="px-3 border-2 rounded-lg">
 			  {getParticipantOption()}
 			</select>
-			<TestComponentButton text="テストを開始" onClick={startTrial}/>
+			<TestComponentButton text="テストを開始"  className="py-2 px-4 font-bold" onClick={startTrial}/>
 		</div>
 	);
 };

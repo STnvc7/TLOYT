@@ -249,7 +249,7 @@ const ThurstoneAnswer=()=>{
 					<PiSpeakerHighFill  size={30} className=
 			    	{(state == AnswerState.AudioPlaying) && ABIndex=="A" ? 
 			    	"animate-pulse text-blue-700" : "opacity-0"}/>
-        		    <input type='radio' name='scoreA' value="A" onChange={()=>setSelectedScore("A")} defaultChecked/>
+        		    <input type='radio' name='score' value="A" onChange={()=>setSelectedScore("A")} defaultChecked/>
         		    <label htmlFor="A" className="text-center text-2xl">A</label>
     			</div>
                 {/* Bの回答部分-------------------------------- */}
@@ -258,7 +258,7 @@ const ThurstoneAnswer=()=>{
 					<PiSpeakerHighFill  size={30} className=
 			    	{(state == AnswerState.AudioPlaying) && ABIndex=="B" ? 
 			    	"animate-pulse text-blue-700" : "opacity-0"}/>
-        		    <input type='radio' name='scoreB' value="B" onChange={()=>setSelectedScore("B")} />
+        		    <input type='radio' name='score' value="B" onChange={()=>setSelectedScore("B")} />
         		    <label htmlFor="B" className="text-center text-2xl">B</label>
     			</div>
 	        </form>

@@ -16,9 +16,7 @@ import { basename } from '@tauri-apps/api/path';
 //=======================================================================
 export const Home = () => {
   const appContext = useContext(AppContext);
-  if (appContext === undefined){
-    return <div>Loading...</div>;
-  }
+  if (appContext === undefined) return;
   const {managers, setManagers} = appContext;
 
   const location = useLocation();
@@ -30,9 +28,9 @@ export const Home = () => {
     }
     let components = [];
     for (let [name, info] of Object.entries(managers)) {
-      components.push(<TestComponent key={name} name={name} info={info}/>);
+      components.push(<TestComponent key={name} info={info}/>);
     }
-    return components;
+    return (<div className="px-6 grid grid-cols-3 gap-5 justify-center">{components}</div>)
   };
 
   //他のページから戻ってきた場合にマネージャを更新する--------------------
@@ -46,15 +44,13 @@ export const Home = () => {
 
   // jsx---------------------------------------------------------------
   return (
-    <div>
+    <div className="overflow-auto">
       <div className="p-8 pb-10 flex flex-row justify-start items-center">
         <PiBeltDuotone size={30}/>
         <p className="px-3 pr-5 text-2xl text-bold text-black">TLOYT</p>
         <AddTestButton/>
       </div>
-      <div className="px-6 flex flex-row justify-left space-x-8">
-        {createTestComponents()}
-      </div>
+      {createTestComponents()}
     </div>
     );
 };
@@ -63,18 +59,19 @@ export const Home = () => {
 テスト選択画面の要素
 */
 interface TestComponentProps {
-  name: string;
   info: {[key: string]: any};
 }
 const TestComponent: FC<TestComponentProps> = (props) => {
   // jsx---------------------------------------------------------------
   return (
     <div className="p-6 bg-white rounded-xl shadow-lg flex-col flex space-y-2">
-      <SettingButton/>
-      <p className="text-xl text-left font-medium text-black">{props.name}</p>
+      <div className="flex flex-row space-x-2">
+        <SettingButton/>
+        <p className="text-xl text-left font-medium text-black">{props.info.name}</p>
+      </div>
       <p className="text-left text-gray-400">{testTypeToString(props.info.test_type)}</p>
-      <div className="pt-3 flex-row space-x-4">
-        <OpenTestButton test={props.name}/>
+      <div className="pt-3 flex flex-row space-x-4">
+        <OpenTestButton test={props.info.name}/>
         <AggregateButton/>
       </div>
     </div>
@@ -85,19 +82,6 @@ const TestComponent: FC<TestComponentProps> = (props) => {
 const AddTestButton=()=>{
   const [clicked, setClicked] = useState<boolean>(false);
 
-  //テストを作成するメソッド-----------------------------------------------
-  const createNewTest = async(testType: tauriTestType, jsonString: string) => {
-    const appContext = useContext(AppContext);
-    if (appContext === undefined) return null;
-
-    //テストをバックエンドで作成-----------------------------------
-    tauriAddTest(testType, jsonString).then(() => {       //作成したら情報を取得
-      return tauriGetSettings()
-    }).then((managers) => {                               //取得した情報からホームを更新
-      appContext.setManagers(managers);
-      setClicked(false);
-    }).catch((err) => console.error(err));
-  }
   // jsx---------------------------------------------------------------
   return(
     <div>
@@ -105,8 +89,7 @@ const AddTestButton=()=>{
         <BsClipboard2Plus size={30} className="
           text-gray-500 hover:text-blue-500 transition duration-300"/>
       </button>
-      <AddTestModal/>
-      {/* {clicked? <AddTestModal onEnd={createNewTest}/>:null} */}
+      {clicked? <AddTestModal closeModal={() => {setClicked(false)}}/>:null}
     </div>
   );
 };
@@ -130,16 +113,19 @@ type SetupInfo = MosSetupInfo | ThurstoneSetupInfo;
 
 //テスト作成のモーダルウィンドウ============================================================
 interface AddTestModalProps {
-  createTest: (testType: tauriTestType, jsonString: string) => void;
+  closeModal: () => void;
 }
-const AddTestModal: FC<AddTestModalProps> =()=>{
+const AddTestModal: FC<AddTestModalProps> =(props)=>{
+  const appContext = useContext(AppContext);
+  if (appContext === undefined) return null;
+
   const [testType, setTestType] = useState<tauriTestType>("Mos");
   const [categories, setCategories] = useState<[string, string][]>([]);
   const [participants, setParticipants] = useState<string[]>([]);
 
   const [currentParticipant, setCurrentParticipant] = useState<string>('');
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SetupInfo>();
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<SetupInfo>();
 
   const inputStyle = "w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg px-2 py-1";
   const labelStyle = "block text-sm font-medium text-gray-900";
@@ -151,9 +137,9 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
       let l: ReactNode[] = [];
       for (let [i, category] of Object.entries(categories)) {
         l.push((
-          <div key={i}>
+          <div key={i} className="border-l-2 border-blue-500 pl-2">
             <p className="text-xs">{category[1]}</p>
-            <div className="flex flex-row space-x-2 justify-between">
+            <div className="flex flex-row space-x-2 justify-between place-items-center">
               <input type="text" defaultValue={category[0]} className={inputStyle + ' w-10/12 text-sm'} 
               onChange={(e) => changeCategoryName(Number(i), e.target.value)}/>
               <RemoveButton text='削除' className='w-2/12 text-sm' type='button' 
@@ -162,9 +148,10 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
           </div>
         ))
       }
-      return l
+      return <div className="pt-2 flex flex-col space-y-0.5">{l}</div>
     }
 
+    // StateとReact hook formに値をセット------------------------------------------------
     const setCategoriesForm= (newCategories: [string, string][])=> {
       setCategories(newCategories);
       setValue("categories", newCategories);
@@ -200,7 +187,7 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
       <div>
         <div className="flex flex-row space-x-2">
           <p className={labelStyle}>カテゴリ</p>
-          <TestComponentButton text='選択' className="text-sm px-1"
+          <TestComponentButton text='選択' type='button' className="text-sm px-1"
             onClick={openDialoge}/>
         </div>
         {categoryList()}
@@ -211,20 +198,22 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
   // 参加者を追加するコンポーネント--------------------------------------------------------
   const participantsInput =()=> {
     //追加された参加者のリストを表示するReact Node---------------------------------
-    const getParticipantsList =() => {
+    const getParticipantsList =(): ReactNode=> {
       if (participants === undefined) return null
       let l: ReactNode[] = []
       for (let [i, participant] of Object.entries(participants)){
         l.push(
-          <div key={i} className="flex flex-row space-x-4 place-items-center justify-between">
-            <li>{participant}</li>
+          <div key={i} className="flex flex-row space-x-2 place-items-center justify-between border-l-2 border-blue-500">
+            <p className='w-10/12 pl-2 text-sm '>{participant}</p>
             <RemoveButton text='削除' type='button' className="w-2/12 text-sm" 
             onClick={() => removeParticipants(Number(i))}/>
           </div>
         )
       }
-      return l
+      return (<div className='py-2 flex flex-col space-y-0.5'>{l}</div>)
     };
+
+    // StateとReact hook formに値をセット------------------------------------------------
     const setParticipantsForm= (newParticipants: string[])=> {
       setParticipants(newParticipants);
       setValue("participants", newParticipants);
@@ -253,7 +242,7 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
     return (
       <div>
         <p className={labelStyle}>実験参加者</p>
-        {participants.length == 0 ? (null) : (<div className="pb-2"> {getParticipantsList()} </div>)}
+        {participants.length == 0 ? (null) : (getParticipantsList())}
         <div className="flex flex-row space-x-2 justify-between">
           <input type='text' value={currentParticipant} onChange={(e) => setCurrentParticipant(e.target.value)} 
           className={inputStyle + " w-10/12"}/>
@@ -264,9 +253,9 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
   }
 
   // フォームを作るコンポーネント-----------------------------------------------------------------
-  const FormComponent = (testWiseElement: ReactNode) => {
+  const FormComponent = (testWiseElement: ReactNode|null) => {
     return (
-      <form id="setup" className="w-full flex flex-row space-x-4" onSubmit={handleSubmit(onSubmit)}>
+      <form id="setup" className="w-full flex flex-row space-x-4" onSubmit={handleSubmit(createNewTest)}>
         {/* 左側--------------------------------------------------------------- */}
         <div className="w-1/2 flex flex-col space-y-4">
           <div>
@@ -282,19 +271,23 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
             <textarea className={inputStyle} rows={6} {...register("description", { required: true })}/>
           </div>
         </div>
+        {/* 右側-------------------------------------------------------------- */}
         <div className="w-1/2  flex flex-col space-y-4">
           {categoryInput()}
           {participantsInput()}
+          <div>
+            <p className={labelStyle}>制限時間</p>
+            <div className="flex flex-row space-x-2 place-items-center">
+              <input type="number" defaultValue={Number(5)} className={inputStyle+ ' w-4/12'} 
+              {...register("time_limit", {required: true, valueAsNumber: true})}/>
+              <p className='w-2/12'>秒</p>
+            </div>
+          </div>
           {testWiseElement}
         </div>
       </form>
     );
   };
-
-  //
-    const onSubmit: SubmitHandler<SetupInfo> = (data)=> {
-      console.log(data);
-    };
 
   //テストタイプに応じてセットアップフォームを作成---------------------------
   const createForm = (): ReactNode => {
@@ -303,14 +296,14 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
         const elem = (
           <div>
             <p className={labelStyle}>繰り返し回数</p>
-            <input type='number' defaultValue={1} className={inputStyle}/>
+            <input type='number' defaultValue={Number(1)} className={inputStyle+ ' w-4/12'} 
+            {...register("num_repeat", {required: true, valueAsNumber: true})}/>
           </div>        
         )
         return FormComponent(elem)
       }
-
       case "Thurstone":{
-        return FormComponent(<></>)
+        return FormComponent(null)
       }
     }
   }
@@ -328,13 +321,43 @@ const AddTestModal: FC<AddTestModalProps> =()=>{
     )
   }
 
+    //テスト作成ボタンのサブミットハンドラ--------------------------------------------------      
+    const createNewTest: SubmitHandler<SetupInfo>= (data: SetupInfo) => {
+
+      let setupInfoJSON: string = "";
+      switch(testType){
+        case "Mos":{
+          const setupInfo: MosSetupInfo = data as MosSetupInfo;
+          console.log(setupInfo);
+          setupInfoJSON = JSON.stringify(setupInfo);
+          break;
+        }
+        case "Thurstone":{
+          const setupInfo: ThurstoneSetupInfo = data as ThurstoneSetupInfo;
+          setupInfoJSON = JSON.stringify(setupInfo);
+          break;
+        }
+      }
+      //テストをバックエンドで作成-----------------------------------
+      tauriAddTest(testType, setupInfoJSON).then(() => {       //作成したら情報を取得
+        return tauriGetSettings()
+      }).then((managers) => {                               //取得した情報からホームを更新
+        appContext.setManagers(managers);
+      }).catch((err) => console.error(err));
+
+      props.closeModal();
+    };
+
   //jsx--------------------------------------------------------------------------
   return (
     <div className="fixed inset-0 z-40 bg-[rgb(0_0_0/0.6)] flex justify-center">
       <div className="w-5/6 my-5 bg-white p-5 rounded-lg overflow-auto">
         <div className='flex flex-row justify-between place-items-center pb-4 border-b-4'>
           <TestTypeSelector/>
+          <div className="flex flex-row space-x-2">
+          <RemoveButton text='戻る' className="py-2 px-4 font-bold border-2" onClick={()=>{props.closeModal()}}/>
           <TestComponentButton text='作成' type='submit' className="py-2 px-4 font-bold" form="setup"/>
+          </div>
         </div>
         <div className='pt-6'>
           {createForm()}

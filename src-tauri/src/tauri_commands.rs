@@ -3,6 +3,7 @@ use crate::test_trial::TrialStatus;
 
 use std::sync::Mutex;
 use tauri::State;
+use log::info;
 
 #[tauri::command(rename_all = "snake_case")]
 pub fn add_test(
@@ -10,6 +11,7 @@ pub fn add_test(
     test_type: TestType,
     json_string: String,
 ) -> Result<(), String> {
+    info!("add_test command is invoked");
     let result = app_manager.lock().unwrap().add_test(test_type, json_string);
     match result {
         Ok(_) => return Ok(()),
@@ -22,6 +24,7 @@ pub fn delete_test(
     app_manager: State<Mutex<ApplicationManager>>,
     test_name: String,
 ) -> Result<(), String> {
+    info!("delete_test command is invoked");
     let result = app_manager.lock().unwrap().delete_test(test_name);
     match result {
         Ok(_) => return Ok(()),
@@ -35,6 +38,7 @@ pub fn edit_test(
     test_name: String,
     json_string: String,
 ) -> Result<(), String> {
+    info!("edit_test command is invoked");
     let result = app_manager
         .lock()
         .unwrap()
@@ -51,6 +55,7 @@ pub fn start_test(
     test_name: String,
     examinee: String,
 ) -> Result<(), String> {
+    info!("start_test command is invoked");
     let result = app_manager.lock().unwrap().start_test(test_name, examinee);
     match result {
         Ok(_) => return Ok(()),
@@ -63,6 +68,7 @@ pub fn close_test(
     app_manager: State<Mutex<ApplicationManager>>,
     examinee: String,
 ) -> Result<(), String> {
+    info!("close_test command is invoked");
     let result = app_manager.lock().unwrap().close_test(examinee);
     match result {
         Ok(_) => return Ok(()),
@@ -74,6 +80,7 @@ pub fn close_test(
 pub fn get_audio(
     app_manager: State<Mutex<ApplicationManager>>,
 ) -> Result<Vec<String>, String> {
+    info!("get_audio command is invoked");
     let result = app_manager.lock().unwrap().get_audio();
     match result {
         Ok(p) => {
@@ -91,6 +98,7 @@ pub fn set_score(
     app_manager: State<Mutex<ApplicationManager>>,
     score: Vec<String>,
 ) -> Result<TrialStatus, String> {
+    info!("set_score command is invoked");
     let result = app_manager.lock().unwrap().set_score(score);
     match result {
         Ok(v) => return Ok(v),
@@ -102,6 +110,7 @@ pub fn set_score(
 pub fn get_settings(
     app_manager: State<Mutex<ApplicationManager>>,
 ) -> Result<Vec<String>, String> {
+    info!("get_setting command is invoked");
     let result = app_manager.lock().unwrap().get_settings();
     match result {
         Ok(v) => return Ok(v),

@@ -23,6 +23,8 @@ thiserror = "1.0.62"
 walkdir = "2.5.0"
 dialoguer = "0.11.0"
 itertools = "0.13.0"
+log = "0.4.22"
+tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

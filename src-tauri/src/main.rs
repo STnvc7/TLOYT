@@ -12,11 +12,22 @@ mod test_trial;
 use crate::app::ApplicationManager;
 use std::sync::Mutex;
 use tauri::Manager;
+use tauri_plugin_log::LogTarget;
+use log::info;
 
 fn main() {
 
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    LogTarget::Stdout, 
+                    LogTarget::Webview,
+                    LogTarget::LogDir
+                ]).build(),
+        )
         .setup(|app| {
+            info!("Application start");
             // let app_data_root = data_dir().unwrap().join("TLOYT");
             let app_data_root = app.handle().path_resolver().app_data_dir().unwrap();
             let app_manager_raw = ApplicationManager::setup(app_data_root)?;
