@@ -22,7 +22,7 @@ export const Home = () => {
   const location = useLocation();
 
   //作成されているテストをバックエンドから取得し，コンポーネントを作成---------
-  const createTestComponents = () => {
+  const TestComponents = () => {
     if (managers === undefined) {
       return
     }
@@ -50,7 +50,7 @@ export const Home = () => {
         <p className="px-3 pr-5 text-2xl text-bold text-black">TLOYT</p>
         <AddTestButton/>
       </div>
-      {createTestComponents()}
+      {TestComponents()}
     </div>
     );
 };
@@ -64,13 +64,14 @@ interface TestComponentProps {
 const TestComponent: FC<TestComponentProps> = (props) => {
   // jsx---------------------------------------------------------------
   return (
-    <div className="p-6 bg-white rounded-xl shadow-lg flex-col flex space-y-2">
-      <div className="flex flex-row space-x-2">
+    <div className="p-6 bg-white rounded-xl shadow-lg flex-col flex">
+      <div className="flex flex-row space-x-2 place-items-center">
         <SettingButton/>
-        <p className="text-xl text-left font-medium text-black">{props.info.name}</p>
+        <p className="text-xl font-medium text-black">{props.info.name}</p>
       </div>
-      <p className="text-left text-gray-400">{testTypeToString(props.info.test_type)}</p>
-      <div className="pt-3 flex flex-row space-x-4">
+      <p className="pt-1 text-sm text-gray-500">{props.info.created_date.replaceAll('-', '/')}</p>
+      <p className="pt-1 text-gray-500">{testTypeToString(props.info.test_type)}</p>
+      <div className="pt-4 flex flex-row space-x-4">
         <OpenTestButton test={props.info.name}/>
         <AggregateButton/>
       </div>
