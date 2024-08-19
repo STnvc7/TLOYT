@@ -3,7 +3,7 @@ use crate::test_manager::TestManager;
 use crate::test_manager::{thurstone::ThurstoneManager, mos::MosManager};
 use crate::test_trial::TrialStatus;
 use crate::error::ApplicationError;
-use log::info;
+use log::{info, warn, error};
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -46,18 +46,18 @@ impl ApplicationManager {
 
         let test_list_path = app_data_root.join(TEST_LIST_FILENAME);
         if test_list_path.exists() {
-            info!("load test managers from test list");
+            info!("Load test managers from test list");
             let json_string = fs::read_to_string(test_list_path)?;
             test_list = serde_json::from_str(&json_string)?;
             managers = ApplicationManager::load(&test_list, app_data_root.clone())?;
         } else {
-            info!("create new test list");
+            info!("Create new test list");
             ApplicationManager::init(app_data_root.clone())?;
             test_list = HashMap::new();
             managers = HashMap::new();
         }
 
-        info!("Application setup is complete");
+        info!("Application setup complete");
 
         Ok(ApplicationManager {
             managers: managers,
@@ -82,7 +82,7 @@ impl ApplicationManager {
                 .join(TEST_MANAGER_SETTING_FILENAME);
             let manager =
                 ApplicationManager::load_test_from_json(t_type.clone(), manager_json_path)?;
-            info!("test loaded : {}", t_name);
+            info!("Test loaded: {}", t_name);
             managers.insert(t_name.clone(), manager);
         }
         info!("All tests have been loaded");
@@ -110,7 +110,7 @@ impl ApplicationManager {
         let json_string = serde_json::to_string_pretty(&test_list)?;
         let mut file = File::create(&test_list_path)?;
         file.write_all(json_string.as_bytes())?;
-        info!("created new test list file : {:?}", test_list_path);
+        info!("Created new test list file: {:?}", test_list_path);
 
         Ok(())
     }
@@ -127,6 +127,7 @@ impl ApplicationManager {
 
         let new_test_name = new_manager.get_name();
         if self.managers.contains_key(&new_test_name) {
+            warn!("Test name has been used: {}", &new_test_name);
             return Err(anyhow!(ApplicationError::AlreadyUsedTestNameError(new_test_name)));
         }
 
@@ -134,13 +135,15 @@ impl ApplicationManager {
         new_manager.save_setting()?;
 
         self.managers.insert(new_test_name.clone(), new_manager);
-        self.test_list.insert(new_test_name, test_type);
+        self.test_list.insert(new_test_name.clone(), test_type);
         self.save_test_list()?;
+
         Ok(())
     }
 
     pub fn delete_test(&mut self, test_name: String) -> Result<()> {
         if self.managers.contains_key(&test_name) == false {
+            warn!("Test does not exist: {}", &test_name);
             return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
         }
         let test_data_dir = self
@@ -148,6 +151,7 @@ impl ApplicationManager {
             .join(TEST_MANAGER_DIRNAME)
             .join(&test_name);
         if test_data_dir.exists() == false {
+            error!("Test directory does not exist: {:?}", &test_data_dir);
             return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
         }
         fs::remove_dir_all(test_data_dir)?;
@@ -165,7 +169,7 @@ impl ApplicationManager {
         self.managers
             .get_mut(&test_name)
             .unwrap()
-            .delete_trial(examinee)?;
+            .delete_trial(examinee.clone())?;
         Ok(())
     }
 
@@ -175,20 +179,22 @@ impl ApplicationManager {
         let json_string = serde_json::to_string_pretty(&self.test_list)?;
         let mut file = File::create(test_list_path)?;
         file.write_all(json_string.as_bytes())?;
+
+        info!("Save test list");
         Ok(())
     }
 
     //-------------------------------------------------
     pub fn start_test(&mut self, test_name: String, examinee: String) -> Result<()> {
         if self.managers.contains_key(&test_name) == false {
+            error!("Test does not exist: {}", &test_name);
             return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
         }
         self.managers
             .get_mut(&test_name)
             .unwrap()
-            .launch_trial(examinee)?;
-        self.active_test_name = Some(test_name);
-
+            .launch_trial(examinee.clone())?;
+        self.active_test_name = Some(test_name.clone());
         Ok(())
     }
 
@@ -201,7 +207,7 @@ impl ApplicationManager {
         self.managers
             .get_mut(&test_name)
             .unwrap()
-            .close_trial(examinee)?;
+            .close_trial(examinee.clone())?;
         Ok(())
     }
 
@@ -227,6 +233,7 @@ impl ApplicationManager {
 
     pub fn edit_test(&mut self, test_name: String, json_string: String) -> Result<()> {
         if self.managers.contains_key(&test_name) == false {
+            error!("Test does not exist: {}", &test_name);
             return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
         }
         self.managers
@@ -240,6 +247,7 @@ impl ApplicationManager {
     pub fn get_audio(&mut self) -> Result<Vec<PathBuf>> {
         let test_name = self.active_test_name.as_mut().unwrap().clone();
         if self.managers.contains_key(&test_name) == false {
+            error!("Test does not exist: {}", test_name);
             return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
         }
         let audio_path = self.managers.get_mut(&test_name).unwrap().get_audio()?;
@@ -250,6 +258,7 @@ impl ApplicationManager {
     pub fn set_score(&mut self, score: Vec<String>) -> Result<TrialStatus> {
         let test_name = self.active_test_name.as_mut().unwrap().clone();
         if self.managers.contains_key(&test_name) == false {
+            error!("Test does not exist: {}", &test_name);
             return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
         }
         let status = self

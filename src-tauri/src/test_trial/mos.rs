@@ -9,6 +9,7 @@ use std::{fs, fs::File};
 use anyhow::{anyhow, Result};
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
+use log::{info, error};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MosScore {
@@ -27,10 +28,13 @@ impl MosScore {
         }
     }
     pub fn get_audio_file_path(&self) -> PathBuf {
-        self.audio_file_path.clone()
+        let path = self.audio_file_path.clone();
+        info!("get audio file: {:?}", &path);
+        return path
     }
     pub fn set_score(&mut self, score: isize) {
         self.score = Some(score);
+        info!("set score: {:?}", score);
     }
 }
 
@@ -56,11 +60,14 @@ impl TestTrial for MosTrial {
     fn to_next(&mut self) -> Result<TrialStatus> {
         if self.score_list.len() > (self.current_idx + 1) {
             self.current_idx += 1;
+            info!("go to next question");
             return Ok(TrialStatus::Doing);
         } else if self.score_list.len() == (self.current_idx + 1) {
             self.current_idx += 1;
+            info!("reach to last question");
             return Ok(TrialStatus::Done);
         } else {
+            error!("test had been ended");
             return Err(anyhow!("Test had been ended"));
         }
     }
@@ -69,6 +76,7 @@ impl TestTrial for MosTrial {
         let path = self.trial_data_root.join(format!("{}.json", self.examinee));
         let mut file = File::create(&path)?;
         file.write_all(json_string.as_bytes())?;
+        info!("save result: {:?}", &path);
         Ok(())
     }
 }
@@ -83,6 +91,7 @@ impl MosTrial {
         let trial_data_root = MosTrial::get_trial_data_root(manager_data_root.clone())?;
         let score_list = MosTrial::generate_score_list(manager_data_root, categories, num_repeat)?;
 
+        info!("new trial for MOS is generated: {:?}", &examinee);
         Ok(MosTrial {
             trial_data_root: trial_data_root,
             examinee: examinee,
@@ -125,13 +134,15 @@ impl MosTrial {
         file_list.shuffle(&mut rand::thread_rng());
 
         let score_list = [dummy_list, file_list].concat();
-
+        
+        info!("generate score list");
         Ok(score_list)
     }
 
     fn get_trial_data_root(manager_data_root: PathBuf) -> Result<PathBuf> {
         let trial_data_root = manager_data_root.join(TRIAL_DIRNAME);
         if trial_data_root.exists() == false {
+            info!("create trial result directory: {:?}", &trial_data_root);
             fs::create_dir_all(&trial_data_root)?;
         }
         return Ok(trial_data_root);

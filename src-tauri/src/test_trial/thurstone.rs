@@ -11,6 +11,7 @@ use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
+use log::{info, error};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ABIndex {
@@ -43,6 +44,7 @@ impl ThurstoneScore {
     }
     pub fn get_audio_file_path(&self) -> Vec<PathBuf> {
         let paths = vec![self.audio_file_path_a.clone(), self.audio_file_path_b.clone()];
+        info!("get audio files: {:?}", paths);
         paths
     }
     pub fn set_score(&mut self, ab_index: ABIndex) {
@@ -50,6 +52,7 @@ impl ThurstoneScore {
             ABIndex::A => self.category_a.clone(),
             ABIndex::B => self.category_b.clone(),
         };
+        info!("set score: {:?}(prefer to {:?})", ab_index, score);
         self.prefer_to = Some(score);
     }
 }
@@ -81,18 +84,20 @@ impl TestTrial for ThurstoneTrial {
                 return Err(anyhow!(ApplicationError::InvalidScoreInputTypeError));
             }
         }
-
         self.score_list[self.current_idx].set_score(ab_score);
         Ok(())
     }
     fn to_next(&mut self) -> Result<TrialStatus> {
         let status = if self.score_list.len() > (self.current_idx + 1) {
             self.current_idx += 1;
+            info!("go to next question");
             Ok(TrialStatus::Doing)
         } else if self.score_list.len() == (self.current_idx + 1) {
             self.current_idx += 1;
+            info!("reach to last question");
             Ok(TrialStatus::Done)
         } else {
+            error!("test had been ended");
             Err(anyhow!("Test had been ended"))
         };
 
@@ -103,6 +108,7 @@ impl TestTrial for ThurstoneTrial {
         let path = self.trial_data_root.join(format!("{}.json", self.examinee));
         let mut file = File::create(&path)?;
         file.write_all(json_string.as_bytes())?;
+        info!("save result: {:?}", &path);
         Ok(())
     }
 }
@@ -116,6 +122,7 @@ impl ThurstoneTrial {
         let trial_data_root = ThurstoneTrial::get_trial_data_root(manager_data_root.clone())?;
         let score_list = ThurstoneTrial::generate_score_list(manager_data_root, categories)?;
 
+        info!("new trial for thurstone method is generated: {:?}", &examinee);
         Ok(ThurstoneTrial {
             trial_data_root: trial_data_root,
             examinee: examinee,
@@ -155,12 +162,14 @@ impl ThurstoneTrial {
         file_list.shuffle(&mut rand::thread_rng());
         file_list.shuffle(&mut rand::thread_rng());
 
+        info!("generate score list");
         Ok(file_list)
     }
 
     fn get_trial_data_root(manager_data_root: PathBuf) -> Result<PathBuf> {
         let trial_data_root = manager_data_root.join(TRIAL_DIRNAME);
         if trial_data_root.exists() == false {
+            info!("create trial result directory: {:?}", &trial_data_root);
             fs::create_dir_all(&trial_data_root)?;
         }
         return Ok(trial_data_root);

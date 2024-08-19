@@ -17,6 +17,6 @@ pub enum ApplicationError {
     TestDataNotFoundError(PathBuf),
     #[error("The names of the audio files are not the same between category")]
     DifferentFilenameInCategoryError,
-    #[error("Different type to set score")]
+    #[error("Different type for set score")]
     InvalidScoreInputTypeError,
 }
