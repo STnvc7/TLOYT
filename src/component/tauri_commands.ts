@@ -2,63 +2,92 @@ import { invoke } from "@tauri-apps/api/tauri";
 
 export type tauriTestType = "Mos" | "Thurstone";
 export const testTypeToString = (testType: tauriTestType): string => {
-    switch (testType) {
-        case "Mos":
-            return "平均オピニオン評価"
-        case "Thurstone":
-            return "一対比較法(サーストン法)"
-      }
-}
+  switch (testType) {
+    case "Mos":
+      return "平均オピニオン評価";
+    case "Thurstone":
+      return "一対比較法(サーストン法)";
+  }
+};
 
 //テストマネージャをバックエンドから取得する関数================================
-export const tauriGetSettings = async (): Promise<{ [key: string]: any }> => {
-    let managers: { [key: string]: any } = {};
-    try {
-      const settings = await invoke<string[]>("get_settings");
+export const tauriGetSettings = (): Promise<{ [key: string]: any }> => {
+  return invoke<string[]>("get_settings")
+    .then((settings) => {
+      let managers: { [key: string]: any } = {};
       for (let setting of settings) {
         let _obj = JSON.parse(setting);
         let _name = _obj["name"];
         managers[_name] = _obj;
       }
-    } catch (err) {
+      return managers; // `managers` オブジェクトを返す
+    })
+    .catch((err) => {
       console.error(err);
-    }
-  
-    return managers;
+      throw err; // エラーを再スロー
+    });
 };
 
-export const tauriAddTest = async (test_type: tauriTestType, json_string: string): Promise<void> => {
-    try {
-        await invoke("add_test", {test_type: test_type, json_string: json_string});
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-export const tauriGetAudio = async (): Promise<string[]> => {
-    try {
-        const paths = await invoke<string[]>("get_audio");
-        return paths;
-    } catch (err) {
-        console.error(err);
-        return []; // エラーが発生した場合、空の配列を返す
-    }
+export const tauriAddTest = async (
+  testType: tauriTestType,
+  jsonString: string
+): Promise<void> => {
+  return invoke("add_test", { test_type: testType, json_string: jsonString })
+    .then(() => {})
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
 };
 
-export const tauriSetScore = async (score: string[]): Promise<string> => {
-    try {
-        const status = await invoke<string>('set_score', {score: score});
-        return status
-    } catch (err) {
-        console.error(err);
-        return ""
-    }
-}
+export const tauriEditTest = async (
+  testName: string,
+  jsonString: string
+): Promise<void> => {
+  return invoke("edit_test", { test_name: testName, json_string: jsonString })
+    .then(() => {})
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
+};
+
+export const tauriDeleteTest = async (testName: string): Promise<void> => {
+  return invoke("delete_test", { test_name: testName })
+    .then(() => {})
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
+};
+
+export const tauriGetAudio = (): Promise<string[]> => {
+  return invoke<string[]>("get_audio")
+    .then((paths) => {
+      return paths;
+    })
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
+};
+
+export const tauriSetScore = (score: string[]): Promise<string> => {
+  return invoke<string>("set_score", { score: score })
+    .then((status) => {
+      return status;
+    })
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
+};
 
 export const tauriCloseTest = async (examineeName: string): Promise<void> => {
-    try {
-        await invoke('close_test', {examinee: examineeName});
-    } catch (err) {
-        console.error(err);
-    }
-}
+  return invoke("close_test", { examinee: examineeName })
+    .then(() => {})
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
+};

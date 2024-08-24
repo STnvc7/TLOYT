@@ -1,10 +1,10 @@
+use crate::app::TestType;
 use crate::constants::{
     CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME, TRIAL_DIRNAME,
 };
-use crate::app::TestType;
+use crate::error::ApplicationError;
 use crate::test_manager::{Categories, ParticipantStatus, TestManager};
 use crate::test_trial::{mos::MosTrial, TestTrial, TrialStatus};
-use crate::error::ApplicationError;
 
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
@@ -19,6 +19,10 @@ use serde_json;
 /*テストのセットアップのための情報を保持する構造体==========================================
 フロントエンドとの情報共有をこの構造体をシリアライズした文字列を通しておこなう
 */
+struct SetupCategoriesInfo {
+    name: String,
+    path: String,
+}
 #[derive(Serialize, Deserialize, Debug)]
 struct SetupInfo {
     name: String,

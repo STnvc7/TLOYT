@@ -1,20 +1,23 @@
 import "../App.css";
 import { FC } from 'react';
+import { overrideTailwindClasses } from "tailwind-override";
 
 //=======================================================================
-interface TestComponentButtonProps {
+interface TextButtonProps {
   text: string;
   className?: string;
   type?: "button" | "submit" | "reset" | undefined;
   onClick?: () => void; 
   form?: string;
+  disabled?: boolean;
 }
-export const TestComponentButton: FC<TestComponentButtonProps> =(props)=>{
-  let buttonStyle = "bg-blue-500 hover:bg-blue-700 transition duration-500 text-white shadow-lg rounded-lg " + props.className;
+export const TextButton: FC<TextButtonProps> =(props)=>{
+  const defaultStyle = "rounded-lg bg-TextButton-color hover:bg-TextButton-hover-color text-white shadow-lg";
+  const style = overrideTailwindClasses(`${defaultStyle} ${props.className}`);
   return (
-        <button type={props.type} onClick={props.onClick} className={buttonStyle} form={props.form}>
+      <button type={props.type} onClick={props.onClick} className={style} form={props.form} disabled={props.disabled === undefined ? false:props.disabled}>
         {props.text}
-        </button>
+      </button>
   );
 };
 
@@ -23,11 +26,16 @@ interface RemoveButtonProps {
   text: string;
   className?: string;
   type?: "button" | "submit" | "reset" | undefined;
-  onClick?: () => void; 
+  onClick?: () => void;
+  disabled?: boolean; 
 }
 export const RemoveButton: FC<RemoveButtonProps>= (props) =>{
-  const style = 'text-red-700 rounded-md shadow-sm ' + props.className;
+  const defaultStyle = 'rounded-lg bg-RemoveButton-color text-white shadow-lg';
+  const style = overrideTailwindClasses(`${defaultStyle} ${props.className}`);
+
   return (
-    <button type={props.type} className={style}onClick={props.onClick}>{props.text}</button>
+    <button type={props.type} className={style} onClick={props.onClick} disabled={props.disabled === undefined ? false:props.disabled}>
+      {props.text}
+    </button>
   );
 };

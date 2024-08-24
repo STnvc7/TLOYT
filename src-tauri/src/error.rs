@@ -3,7 +3,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ApplicationError {
-    #[error("{0} has already used for test name")]
+    #[error("\'{0}\' has already used")]
     AlreadyUsedTestNameError(String),   
     #[error("There is no available test: {0}")]
     UnavailableTestError(String),

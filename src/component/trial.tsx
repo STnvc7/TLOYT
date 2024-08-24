@@ -1,11 +1,11 @@
-import { useContext, useState, useEffect, ReactNode, ChangeEvent } from 'react';
+import { useContext, useState, ReactNode, ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { IoIosArrowRoundBack } from "react-icons/io";
 import { invoke } from "@tauri-apps/api/tauri";
 
 import "../App.css";
 import { TrialContext, TrialProvider, TrialStatus } from "./context.tsx";
-import { TestComponentButton } from "./button.tsx";
+import { TextButton } from "./button.tsx";
 import { Answer } from './answer.tsx';
 import { testTypeToString } from './tauri_commands.ts';
 
@@ -164,7 +164,7 @@ const ReadyTrial=()=>{
 			className="px-3 border-2 rounded-lg">
 			  {getParticipantOption()}
 			</select>
-			<TestComponentButton text="テストを開始"  className="py-2 px-4 font-bold" onClick={startTrial}/>
+			<TextButton text="テストを開始"  className="py-2 px-4 font-bold" onClick={startTrial}/>
 		</div>
 	);
 };

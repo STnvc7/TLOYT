@@ -1,9 +1,9 @@
-pub mod thurstone;
 pub mod mos;
+pub mod thurstone;
 
 use crate::constants::AVAILABLE_AUDIO_FILE_EXTENTION;
-use crate::test_trial::TrialStatus;
 use crate::error::ApplicationError;
+use crate::test_trial::TrialStatus;
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -33,8 +33,22 @@ pub trait TestManager: Send + Sync {
 //実験参加者の状態を表す列挙型================================================
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ParticipantStatus {
-    Yet, //未受験
+    Yet,  //未受験
     Done, //受験済み
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Participant {
+    name: String,
+    status: ParticipantStatus,
+}
+impl Participant {
+    pub fn get_name(&self) -> String {
+        self.name.clone()
+    }
+    pub fn get_status(&self) -> ParticipantStatus {
+        self.status.clone()
+    }
 }
 
 // テストの比較対象のカテゴリを操作する構造体========================================
@@ -65,10 +79,10 @@ impl Categories {
             original_paths.push(category.1.clone());
 
             let _filenames = Categories::glob_audio_filenames(category.1.clone())?; // 音声ファイルを取得
-            // ループの最初の時はシンプルに格納
+                                                                                    // ループの最初の時はシンプルに格納
             if i == 0 {
                 filenames = _filenames;
-                continue
+                continue;
             }
             // カテゴリ内の音声ファイルのリストが異なる場合はエラー
             if filenames != _filenames {

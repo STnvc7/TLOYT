@@ -52,7 +52,7 @@ impl ThurstoneScore {
             ABIndex::A => self.category_a.clone(),
             ABIndex::B => self.category_b.clone(),
         };
-        info!("set score: {:?}(prefer to {:?})", ab_index, score);
+        info!("set score: {:?} (prefer to {:?})", ab_index, score);
         self.prefer_to = Some(score);
     }
 }
