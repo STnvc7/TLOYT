@@ -1,9 +1,9 @@
 use crate::constants::{TEST_LIST_FILENAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME};
-use crate::test_manager::TestManager;
-use crate::test_manager::{thurstone::ThurstoneManager, mos::MosManager};
-use crate::test_trial::TrialStatus;
 use crate::error::ApplicationError;
-use log::{info, warn, error};
+use crate::test_manager::TestManager;
+use crate::test_manager::{mos::MosManager, thurstone::ThurstoneManager};
+use crate::test_trial::TrialStatus;
+use log::{error, info, warn};
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -63,7 +63,7 @@ impl ApplicationManager {
             managers: managers,
             app_data_root: app_data_root,
             test_list: test_list,
-            active_test_name: None
+            active_test_name: None,
         })
     }
 
@@ -96,14 +96,14 @@ impl ApplicationManager {
     ) -> Result<Box<dyn TestManager>> {
         match test_type {
             TestType::Mos => Ok(Box::new(MosManager::from_json(setting_json_path)?)),
-            TestType::Thurstone => {
-                Ok(Box::new(ThurstoneManager::from_json(setting_json_path)?))
-            }
+            TestType::Thurstone => Ok(Box::new(ThurstoneManager::from_json(setting_json_path)?)),
         }
     }
 
     //-------------------------------------------------
     fn init(app_data_root: PathBuf) -> Result<()> {
+        info!("initialize this app");
+
         let test_list_path = app_data_root.join(TEST_LIST_FILENAME);
 
         let test_list: HashMap<String, TestType> = HashMap::new();
@@ -128,7 +128,9 @@ impl ApplicationManager {
         let new_test_name = new_manager.get_name();
         if self.managers.contains_key(&new_test_name) {
             warn!("Test name has been used: {}", &new_test_name);
-            return Err(anyhow!(ApplicationError::AlreadyUsedTestNameError(new_test_name)));
+            return Err(anyhow!(ApplicationError::AlreadyUsedTestNameError(
+                new_test_name
+            )));
         }
 
         new_manager.copy_categories()?;
@@ -137,6 +139,8 @@ impl ApplicationManager {
         self.managers.insert(new_test_name.clone(), new_manager);
         self.test_list.insert(new_test_name.clone(), test_type);
         self.save_test_list()?;
+
+        info!("test added: {}", new_test_name);
 
         Ok(())
     }
@@ -159,6 +163,7 @@ impl ApplicationManager {
         self.test_list.remove(&test_name);
         self.managers.remove(&test_name);
         self.save_test_list()?;
+        info!("test deleted: {}", test_name);
         Ok(())
     }
 
@@ -208,6 +213,7 @@ impl ApplicationManager {
             .get_mut(&test_name)
             .unwrap()
             .close_trial(examinee.clone())?;
+        self.active_test_name = None;
         Ok(())
     }
 
@@ -219,6 +225,7 @@ impl ApplicationManager {
             .get_mut(&test_name)
             .unwrap()
             .launch_preview()?;
+        self.active_test_name = Some(test_name);
         Ok(())
     }
 
@@ -228,6 +235,7 @@ impl ApplicationManager {
             return Err(anyhow!(ApplicationError::UnavailableTestError(test_name)));
         }
         self.managers.get_mut(&test_name).unwrap().close_preview()?;
+        self.active_test_name = None;
         Ok(())
     }
 

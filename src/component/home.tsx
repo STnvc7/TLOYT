@@ -1,17 +1,15 @@
-import { useContext, useEffect, useState, FC, ReactNode } from "react";
+import { useContext, useEffect, useState, FC } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
-
-import { IoSettingsSharp } from "react-icons/io5";
 import { PiBeltDuotone } from "react-icons/pi";
-
-import { Dialog, DialogPanel, Radio, RadioGroup } from '@headlessui/react'
+import { Dialog, DialogPanel } from '@headlessui/react'
 
 import "../App.css";
-import { tauriGetSettings, tauriTestType, testTypeToString, tauriDeleteTest } from './tauri_commands.ts';
+import { tauriGetSettings, tauriTestType, testTypeToString } from '../tauri_commands.ts';
 import { AppContext } from "./context.tsx";
-import { TextButton, RemoveButton} from "./button.tsx";
+import { TextButton } from "./button.tsx";
 import { ListElement } from "./list.tsx";
 import { SetupForm } from "./setup_form.tsx";
+import { Setting } from "./setting.tsx";
 
 //=======================================================================
 export const Home = () => {
@@ -124,7 +122,6 @@ const AddTestButton =()=>{
 };
 
 
-type menuType = "edit" | "participants" | "aggregate" | "preview";
 interface SettingButtonProps {
   info: {[key: string]: any};
 }
@@ -132,12 +129,7 @@ interface SettingButtonProps {
 const SettingButton: FC<SettingButtonProps> =({info})=>{
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
-  const menuList = [{value:'edit', label:'テストの編集'}, {value:'participants', label:'実験参加者'},
-                    {value:'aggregate', label:'集計'}, {value:'preview', label:'プレビュー'}]
-  const [menu, setMenu] = useState<menuType>('edit');
-
   const closeModal= ()=> {
-    setMenu("edit");
     setIsOpen(false);
   }
 
@@ -146,23 +138,8 @@ const SettingButton: FC<SettingButtonProps> =({info})=>{
       <Dialog open={isOpen} as='div' onClose={()=>{closeModal()}}>
         <div className='fixed inset-0 z-40 bg-[rgb(0_0_0/0.6)] flex justify-center'>
           <div className="w-5/6 my-5 bg-white rounded-lg">
-            <DialogPanel className='flex flex-row h-full'>
-              <div className="w-1/4 h-full bg-gray-200 p-3">
-                <RadioGroup value={menu} onChange={setMenu} className='grid grid-cols-1'>
-                  {menuList.map((elem)=>(
-                    <Radio key={elem.value} value={elem.value} className="group flex flex-row space-x-2 items-center">
-                      <ListElement invisible={menu!==elem.value}>
-                      <p className="w-full cursor-pointer px-2 py-1 rounded-lg group-data-[checked]:bg-gray-300">
-                        {elem.label}
-                      </p>
-                      </ListElement>
-                    </Radio>               
-                  ))}
-                </RadioGroup>
-              </div>
-              <div className="w-3/4 h-full overflow-auto">
-                <SettingPanel menu={menu} info={info}/>
-              </div>
+            <DialogPanel className="h-full rounded-lg">
+              <Setting testName={info.name}/>           
             </DialogPanel>
           </div>
         </div>
@@ -172,65 +149,13 @@ const SettingButton: FC<SettingButtonProps> =({info})=>{
   // jsx---------------------------------------------------------------
   return (
     <>
-      {/* <button>
-        <IoSettingsSharp onClick={()=>{setIsOpen(true);}}
-        className="transform transition-transform duration-500 hover:rotate-180"/>
-      </button> */}
-      <TextButton text="管理" onClick={()=>{setIsOpen(true);}} className="bg-gray-400 px-3 hover:bg-gray-500"/>
+      <TextButton text="管理" onClick={()=>{setIsOpen(true);}} className="px-3 text-gray-600 hover:bg-gray-600 hover:text-white font-bold"/>
       <SettingModal/>
     </>
   );
 };
 
-interface SettingPanelProps {
-  menu: menuType;
-  info: {[key: string]: any};
-}
-const SettingPanel: FC<SettingPanelProps> = ({menu, info}) => {
-  let elem: ReactNode;
-  switch(menu) {
-    case "edit": {
-      elem = <EditPanel info={info}/>
-    }
-  }
 
-  return (
-    <div className="p-6 flex flex-col">
-      {elem}
-    </div>
-  )
-}
-
-interface EditPanelProps {
-  info: {[key: string]: any}
-}
-const EditPanel: FC<EditPanelProps>= ({info}) => {
-  const appContext = useContext(AppContext);
-  if(appContext===undefined) return;
-
-  const removeButtonHandler = ()=> {
-    const confirm = window.confirm("テストを削除してもよろしいですか？");
-    if (confirm) {
-      tauriDeleteTest(info.name).then(() => {
-        return tauriGetSettings()
-      }).then((managers) => {                               //取得した情報からホームを更新
-        appContext.setManagers(managers);
-      }).catch((err) => {
-        alert(err);
-        console.error(err);
-      });
-    }
-  }
-  return (
-    <div className="flex flex-col space-y-12">
-      <SetupForm testType={info.test_type} edit defaultInfo={info} id="edit"/>
-      <div className="flex flex-row space-x-4 justify-around border-t-4 pt-8">
-        <TextButton text='保存' form="edit" className="w-1/3 py-2 px-4 font-bold"/>
-        <RemoveButton text='テストを削除' className="w-1/3 py-2 px-4 font-bold" onClick={removeButtonHandler}/>
-      </div>
-    </div>
-  )
-};
 
 //テスト選択ボタン=======================================================
 interface OpenTestButtonProps{
@@ -239,7 +164,7 @@ interface OpenTestButtonProps{
 const OpenTestButton: FC<OpenTestButtonProps> =(props)=>{
   const navigate = useNavigate();
   const openTrial=()=> {
-    navigate(`/trial/${props.test}`);
+    navigate(`/trial/${props.test}/undefined`);
   }
   // jsx---------------------------------------------------------------
   return (

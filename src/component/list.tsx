@@ -9,8 +9,8 @@ interface ListElementProps {
 }
 export const ListElement: FC<ListElementProps> = ({children, className, invisible})=> {
 
-    const defaultStyle = `w-1 ${invisible===true? '':'bg-[#F3AA60]'} rounded-lg`;
-    const style = overrideTailwindClasses(`${defaultStyle} ${className}`);
+    const defaultStyle = `w-1 bg-ListElement-color rounded-lg`;
+    const style = overrideTailwindClasses(`${defaultStyle} ${className} ${invisible? "bg-transparent":""}`);
     return (
         <div className='w-full flex flex-row space-x-2'>
             <div className={style}/>

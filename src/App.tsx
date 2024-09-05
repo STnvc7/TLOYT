@@ -2,7 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import "./App.css";
 import {Home} from "./component/home.tsx";
 import {AppProvider} from "./component/context.tsx";
-import {Trial} from "./component/trial.tsx"
+import {TrialFromURL} from "./component/trial.tsx"
 
 function App() {
   return (
@@ -11,7 +11,7 @@ function App() {
       <BrowserRouter>
       <Routes>
         <Route path='/' element={<Home/>} />
-        <Route path='/trial/:test' element={<Trial/>} />
+        <Route path='/trial/:test/:examinee' element={<TrialFromURL/>} />
       </Routes>
       </BrowserRouter>
       </AppProvider>

@@ -1,17 +1,17 @@
 import { useContext, useState, FC, useEffect } from "react";
 import { useForm, SubmitHandler, FormProvider, useFormContext } from "react-hook-form";
+import { open } from '@tauri-apps/api/dialog';
+import { basename } from '@tauri-apps/api/path';
+import { overrideTailwindClasses } from "tailwind-override";
 
 import "../App.css";
-import { tauriGetSettings, tauriTestType, tauriAddTest, tauriEditTest } from './tauri_commands.ts';
+import { tauriGetSettings, tauriTestType, tauriAddTest, tauriEditTest } from '../tauri_commands.ts';
 import { AppContext } from "./context.tsx";
 import { TextButton, RemoveButton } from "./button.tsx";
 import { ListElement } from "./list.tsx";
 
-import { open } from '@tauri-apps/api/dialog';
-import { basename } from '@tauri-apps/api/path';
-
-const inputStyle = " bg-gray-50 border border-gray-300 rounded-lg px-2 py-1 ";
-const labelStyle = " block text-sm font-medium text-gray-800 ";
+const inputStyle = "bg-gray-50 border border-gray-300 rounded-lg px-2 py-1 ";
+const labelStyle = "block text-sm font-medium text-gray-800 ";
 
 // 各テストのセットアップに必要な情報のインターフェース======================
 interface SetupInfoBase {
@@ -28,10 +28,10 @@ interface MosSetupInfo extends SetupInfoBase {
 }
 interface ThurstoneSetupInfo extends SetupInfoBase {
 }
-type SetupInfo = MosSetupInfo | ThurstoneSetupInfo;
+export type SetupInfo = MosSetupInfo | ThurstoneSetupInfo;
 
-// 各インターフェースのデフォルト値を設定=========================================================================
-const getDefaultSetupValue= (testType: tauriTestType, info?: {[key: string]: any}) => {
+// 各インターフェースのデフォルト値を設定=======================================================
+export const getDefaultSetupValue= (testType: tauriTestType, info?: {[key: string]: any}) => {
 
   let defaultValues: SetupInfo = {name: "", author: "", description: "", participants: [], categories: [], time_limit: 5};
 
@@ -71,8 +71,8 @@ export const SetupForm: FC<SetupFormComponentProps> = ({testType, edit, defaultI
     const appContext = useContext(AppContext);
     if (appContext === undefined) return null;
 
-    //react-hook-form --------------------------------
     const defaultValues = getDefaultSetupValue(testType, defaultInfo);
+    //react-hook-form --------------------------------
     const methods = useForm<SetupInfo>({
       defaultValues: defaultValues
     });
@@ -98,17 +98,6 @@ export const SetupForm: FC<SetupFormComponentProps> = ({testType, edit, defaultI
         return
       }
 
-      // let setupInfo: SetupInfo;
-      // switch(testType){
-      //   case "Mos":{
-      //     setupInfo = data as MosSetupInfo;
-      //     break;
-      //   }
-      //   case "Thurstone":{
-      //     setupInfo = data as ThurstoneSetupInfo;
-      //     break;
-      //   }
-      // }
       let setupInfoJSON = JSON.stringify(data);
       console.log("send setup form:", data);
       //テストをバックエンドで作成-----------------------------------
@@ -130,22 +119,22 @@ export const SetupForm: FC<SetupFormComponentProps> = ({testType, edit, defaultI
         <form id={id} className="w-full flex flex-col space-y-4" onSubmit={handleSubmit(submitHandler)}>
             <div>
               <p className={labelStyle}>テスト名</p>
-              <input type="text" className={`${inputStyle} w-full ${edit ? "text-gray-300":"text-black"}`} {...register("name")} disabled={edit}/>
+              <input type="text" className={overrideTailwindClasses(`${inputStyle} w-full ${edit ? "text-gray-300":"text-black"}`)} {...register("name")} disabled={edit}/>
             </div>
             <div>
               <p className={labelStyle}>作成者</p>
-              <input type="text" className={inputStyle + "w-full"} {...register("author")}/>
+              <input type="text" className={overrideTailwindClasses(`${inputStyle} w-full`)} {...register("author")}/>
             </div>
             <div>
               <p className={labelStyle}>説明</p>
-              <textarea className={inputStyle + "w-full"} rows={6} {...register("description")}/>
+              <textarea className={overrideTailwindClasses(`${inputStyle} w-full`)} rows={6} {...register("description")}/>
             </div>
             <CategoryInput/>
-            <ParticipantsInput/>
+            <ParticipantsInput edit={edit}/>
             <div>
               <p className={labelStyle}>制限時間</p>
               <div className="flex flex-row space-x-2 place-items-center">
-                <input type="number" className={inputStyle+ 'w-1/3'} 
+                <input type="number" className={overrideTailwindClasses(`${inputStyle} w-1/3`)} 
                 {...register("time_limit", {valueAsNumber: true})}/>
                 <p>秒</p>
               </div>
@@ -210,7 +199,7 @@ const CategoryInput= ()=> {
             <div>
               <p className="text-xs">{category[1]}</p>
               <div className="flex flex-row space-x-2 justify-between place-items-center">
-                <input type="text" defaultValue={category[0]} className={inputStyle + ' w-10/12 text-sm'} 
+                <input type="text" defaultValue={category[0]} className={overrideTailwindClasses(`${inputStyle} w-10/12 text-sm`)} 
                 onChange={(e) => changeCategoryName(Number(i), e.target.value)}/>
                 <RemoveButton text='削除' className='w-2/12 text-xs px-4 py-1 rounded-md' type='button' 
                 onClick={() => {removeCategory(Number(i))}}/>
@@ -222,10 +211,11 @@ const CategoryInput= ()=> {
   )
 }
 
-
+interface ParticipantsInputProps {
+  edit: boolean;
+}
 // 参加者を追加するコンポーネント============================================================
-const ParticipantsInput =()=> {
-  
+const ParticipantsInput: FC<ParticipantsInputProps> =({edit})=> {
   const [participants, setParticipants] = useState<string[]>([]);
   const [currentParticipant, setCurrentParticipant] = useState<string>("");
   const { setValue, getValues } = useFormContext();
@@ -271,7 +261,7 @@ const ParticipantsInput =()=> {
               <div key={i} className="w-full flex flex-row space-x-2 items-center justify-between">
                 <p className='w-10/12 pl-2 text-sm'>{participant}</p>
                 <RemoveButton text='削除' type='button' className="w-2/12 text-xs px-4 py-1 rounded-md" 
-                onClick={() => removeParticipants(Number(i))}/>
+                onClick={() => removeParticipants(Number(i))} disabled={edit}/>
               </div>
             </ListElement>
           ))}
@@ -280,7 +270,7 @@ const ParticipantsInput =()=> {
 
       <div className="mt-2 flex flex-row space-x-2 justify-between">
         <input type='text' value={currentParticipant} onChange={(e) => setCurrentParticipant(e.target.value)} 
-        className={inputStyle + " w-10/12 text-sm"}/>
+        className={overrideTailwindClasses(`${inputStyle} w-10/12 text-sm`)}/>
         <TextButton text="追加" type='button' onClick={()=>addParticipant()} className="w-2/12 text-xs px-4 py-1 rounded-md" disabled={currentParticipant == ""}/>
       </div>
     </div>
@@ -308,7 +298,7 @@ const MosSpecificInput=()=>{
     <div>
       <p className={labelStyle}>繰り返し回数</p>
       <div className="flex flex-row space-x-2 place-items-center">
-        <input type='number' defaultValue={Number(1)} className={inputStyle+ ' w-4/12'} 
+        <input type='number' defaultValue={Number(1)} className={overrideTailwindClasses(`${inputStyle} w-4/12`)} 
         {...register("num_repeat", {valueAsNumber: true})}/>
         <p>回</p>
       </div>

@@ -5,13 +5,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        'TextButton-color': '#468B97',
-        'TextButton-hover-color' : '#1D5B79',
-        'RemoveButton-color': '#EF6262',
-        'ListElement-color': '#F3AA60'
+        'TextButton-color': '#005C78',
+        'RemoveButton-color': '#9A3B3B',
+        'ListElement-color': '#468B97'
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography')
+  ],
 }
 

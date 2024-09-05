@@ -20,6 +20,12 @@
         "all": true,
         "asset": true,
         "assetScope": [ "**" ]
+      },
+      "fs": {
+        "all": true,
+        "scope": [
+            "$APPDATA/**"
+          ]
       }
     },
     "windows": [

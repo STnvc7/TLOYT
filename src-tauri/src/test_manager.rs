@@ -37,20 +37,6 @@ pub enum ParticipantStatus {
     Done, //受験済み
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Participant {
-    name: String,
-    status: ParticipantStatus,
-}
-impl Participant {
-    pub fn get_name(&self) -> String {
-        self.name.clone()
-    }
-    pub fn get_status(&self) -> ParticipantStatus {
-        self.status.clone()
-    }
-}
-
 // テストの比較対象のカテゴリを操作する構造体========================================
 // 注意：カテゴリ内の音声ファイルの名前はカテゴリ間で同じものとする必要あり．
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -84,9 +70,12 @@ impl Categories {
                 filenames = _filenames;
                 continue;
             }
+
             // カテゴリ内の音声ファイルのリストが異なる場合はエラー
             if filenames != _filenames {
-                return Err(anyhow!(ApplicationError::DifferentFilenameInCategoryError));
+                return Err(anyhow!(ApplicationError::InvalidCategoriesError(
+                    "each category has different filename".to_string()
+                )));
             }
         }
 

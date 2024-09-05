@@ -13,17 +13,14 @@ use std::{fs, fs::File};
 
 use anyhow::{anyhow, Result};
 use chrono::{Local, NaiveDate};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_json;
 
 /*テストのセットアップのための情報を保持する構造体==========================================
 フロントエンドとの情報共有をこの構造体をシリアライズした文字列を通しておこなう
 */
-struct SetupCategoriesInfo {
-    name: String,
-    path: String,
-}
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct SetupInfo {
     name: String,
     author: String,
@@ -62,6 +59,7 @@ impl TestManager for MosManager {
     fn launch_trial(&mut self, examinee: String) -> Result<()> {
         // 参加者のリストの中に，受験者の名前がないとエラー
         if self.participants.contains_key(&examinee) == false {
+            error!("there is no participant: {}", &examinee);
             return Err(anyhow!(ApplicationError::UnregisteredParticipantError(
                 examinee,
                 self.name.clone()
@@ -69,6 +67,7 @@ impl TestManager for MosManager {
         }
         //　受験者が既にテストを受けていたらエラー
         if let Some(ParticipantStatus::Done) = self.participants.get(&examinee) {
+            error!("this participant has already taken test: {}", examinee);
             return Err(anyhow!(ApplicationError::AlreadyTakenTrialError(examinee)));
         }
 
@@ -93,6 +92,10 @@ impl TestManager for MosManager {
         *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Done;
         self.active_trial = None;
         self.save_setting()?;
+        info!(
+            "trial finished: test: {}, examinee: {}",
+            self.name, examinee
+        );
         Ok(())
     }
 
@@ -105,12 +108,14 @@ impl TestManager for MosManager {
 
         // 削除するデータがそもそも無い場合はエラー
         if trial_json_path.exists() == false {
+            error!("there is no trial data: {:?}", &trial_json_path);
             return Err(anyhow!(ApplicationError::TrialDataNotFoundError(
                 trial_json_path
             )));
         }
 
-        fs::remove_file(trial_json_path)?; //ファイルを削除
+        fs::remove_file(&trial_json_path)?; //ファイルを削除
+        info!("trial data removed: {:?}", trial_json_path);
         *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Yet; // 受験者のステータスを更新
         self.save_setting()?;
         Ok(())
@@ -140,6 +145,8 @@ impl TestManager for MosManager {
     // マネージャの情報を編集---------------------------------------------------
     fn edit(&mut self, json_string: String) -> Result<()> {
         let info: SetupInfo = serde_json::from_str(&json_string)?;
+        info!("test edit: {:?}", info.clone());
+
         self.name = info.name;
         self.author = info.author;
         self.modified_date = Local::now().date_naive();
@@ -174,8 +181,10 @@ impl TestManager for MosManager {
             let mut options = fs_extra::dir::CopyOptions::new();
             options.copy_inside = true;
             options.skip_exist = true;
-            fs_extra::dir::copy(_path, destination, &options)?;
+            fs_extra::dir::copy(&_path, &destination, &options)?;
+            info!("directory copied: from {:?} to {:?}", _path, destination);
         }
+        info!("all category copied successfully");
         Ok(())
     }
 
@@ -184,8 +193,12 @@ impl TestManager for MosManager {
         let json_path = self.manager_data_root.join(TEST_MANAGER_SETTING_FILENAME);
 
         let json_string = serde_json::to_string_pretty(&self)?;
-        let mut file = File::create(json_path)?;
+        let mut file = File::create(&json_path)?;
         file.write_all(json_string.as_bytes())?;
+        info!(
+            "save setting successfully: {:?}\ndata: {}",
+            json_path, json_string
+        );
         Ok(())
     }
 
@@ -196,34 +209,6 @@ impl TestManager for MosManager {
 }
 
 impl MosManager {
-    fn new(
-        manager_data_root: PathBuf,
-        name: String,
-        author: String,
-        created_date: NaiveDate,
-        modified_date: NaiveDate,
-        description: String,
-        categories: Categories,
-        participants: HashMap<String, ParticipantStatus>,
-        time_limit: usize,
-        num_repeat: usize,
-    ) -> MosManager {
-        MosManager {
-            manager_data_root: manager_data_root,
-            name: name,
-            test_type: TestType::Mos,
-            author: author,
-            created_date: created_date,
-            modified_date: modified_date,
-            description: description,
-            categories: categories,
-            participants: participants,
-            time_limit: time_limit,
-            num_repeat: num_repeat,
-            active_trial: None,
-        }
-    }
-
     // jsonファイルをデシリアライズして構造体を生成------------------------------------------
     pub fn from_json(path_to_test_config: PathBuf) -> Result<MosManager> {
         // ファイルがなければエラー
@@ -244,18 +229,20 @@ impl MosManager {
             MosManager::get_manager_data_root(app_data_root, info.name.clone())?;
         let categories = Categories::setup(info.categories)?;
 
-        return Ok(MosManager::new(
-            manager_data_root,
-            info.name,
-            info.author,
-            Local::now().date_naive(),
-            Local::now().date_naive(),
-            info.description,
-            categories,
-            MosManager::setup_participants(info.participants),
-            info.time_limit,
-            info.num_repeat,
-        ));
+        return Ok(MosManager {
+            manager_data_root: manager_data_root,
+            name: info.name,
+            test_type: TestType::Mos,
+            author: info.author,
+            created_date: Local::now().date_naive(),
+            modified_date: Local::now().date_naive(),
+            description: info.description,
+            categories: categories,
+            participants: MosManager::setup_participants(info.participants),
+            time_limit: info.time_limit,
+            num_repeat: info.num_repeat,
+            active_trial: None,
+        });
     }
 
     // マネージャの情報を保存するディレクトリを返す-------------------------------------------

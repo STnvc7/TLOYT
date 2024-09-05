@@ -10,21 +10,17 @@ mod test_manager;
 mod test_trial;
 
 use crate::app::ApplicationManager;
+use log::info;
 use std::sync::Mutex;
 use tauri::Manager;
 use tauri_plugin_log::LogTarget;
-use log::info;
 
 fn main() {
-
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
-                .targets([
-                    LogTarget::Stdout, 
-                    LogTarget::Webview,
-                    LogTarget::LogDir
-                ]).build(),
+                .targets([LogTarget::Stdout, LogTarget::Webview, LogTarget::LogDir])
+                .build(),
         )
         .setup(|app| {
             info!("Application start");
@@ -48,7 +44,11 @@ fn main() {
             tauri_commands::close_test,
             tauri_commands::get_audio,
             tauri_commands::set_score,
-            tauri_commands::get_settings,])
+            tauri_commands::get_settings,
+            tauri_commands::delete_trial,
+            tauri_commands::start_preview,
+            tauri_commands::close_preview,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

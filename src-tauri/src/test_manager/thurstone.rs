@@ -1,7 +1,7 @@
+use crate::app::TestType;
 use crate::constants::{
     CATEGORIES_DIRNAME, TEST_MANAGER_DIRNAME, TEST_MANAGER_SETTING_FILENAME, TRIAL_DIRNAME,
 };
-use crate::app::TestType;
 use crate::error::ApplicationError;
 use crate::test_manager::{Categories, ParticipantStatus, TestManager};
 use crate::test_trial::{thurstone::ThurstoneTrial, TestTrial, TrialStatus};
@@ -13,6 +13,7 @@ use std::{fs, fs::File};
 
 use anyhow::{anyhow, Result};
 use chrono::{Local, NaiveDate};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_json;
 
@@ -20,7 +21,7 @@ use serde_json;
 TestManagerをセットアップするための構造体
 フロントエンドでこの構造体と同じ構造のオブジェクトを生成し，Rust側に渡すことで新しいテストを生成する
 */
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct SetupInfo {
     name: String,
     author: String,
@@ -57,6 +58,7 @@ impl TestManager for ThurstoneManager {
     fn launch_trial(&mut self, examinee: String) -> Result<()> {
         // 参加者のリストの中に，受験者の名前がないとエラー
         if self.participants.contains_key(&examinee) == false {
+            error!("there is no participant: {}", &examinee);
             return Err(anyhow!(ApplicationError::UnregisteredParticipantError(
                 examinee,
                 self.name.clone()
@@ -64,6 +66,7 @@ impl TestManager for ThurstoneManager {
         }
         //　受験者が既にテストを受けていたらエラー
         if let Some(ParticipantStatus::Done) = self.participants.get(&examinee) {
+            error!("this participant has already taken test: {}", examinee);
             return Err(anyhow!(ApplicationError::AlreadyTakenTrialError(examinee)));
         }
 
@@ -87,6 +90,10 @@ impl TestManager for ThurstoneManager {
         *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Done; // 受験者のステータスを更新
         self.active_trial = None;
         self.save_setting()?;
+        info!(
+            "trial finished: test: {}, examinee: {}",
+            self.name, examinee
+        );
         Ok(())
     }
 
@@ -99,12 +106,14 @@ impl TestManager for ThurstoneManager {
 
         // 削除するデータがそもそも無い場合はエラー
         if trial_json_path.exists() == false {
+            error!("there is no trial data: {:?}", &trial_json_path);
             return Err(anyhow!(ApplicationError::TrialDataNotFoundError(
                 trial_json_path
             )));
         }
 
-        fs::remove_file(trial_json_path)?; //ファイルを削除
+        fs::remove_file(&trial_json_path)?; //ファイルを削除
+        info!("trial data removed: {:?}", trial_json_path);
         *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Yet; // 受験者のステータスを更新
         self.save_setting()?;
         Ok(())
@@ -133,6 +142,8 @@ impl TestManager for ThurstoneManager {
     // マネージャの情報を編集---------------------------------------------------
     fn edit(&mut self, json_string: String) -> Result<()> {
         let info: SetupInfo = serde_json::from_str(&json_string)?;
+        info!("test edit: {:?}", info.clone());
+
         self.name = info.name;
         self.author = info.author;
         self.modified_date = Local::now().date_naive();
@@ -166,8 +177,10 @@ impl TestManager for ThurstoneManager {
             let mut options = fs_extra::dir::CopyOptions::new();
             options.copy_inside = true;
             options.skip_exist = true;
-            fs_extra::dir::copy(_path, destination, &options)?;
+            fs_extra::dir::copy(&_path, &destination, &options)?;
+            info!("directory copied: from {:?} to {:?}", _path, destination);
         }
+        info!("all category copied successfully");
         Ok(())
     }
 
@@ -176,8 +189,12 @@ impl TestManager for ThurstoneManager {
         let json_path = self.manager_data_root.join(TEST_MANAGER_SETTING_FILENAME);
 
         let json_string = serde_json::to_string_pretty(&self)?; // 構造体をシリアライズ
-        let mut file = File::create(json_path)?;
+        let mut file = File::create(&json_path)?;
         file.write_all(json_string.as_bytes())?;
+        info!(
+            "save setting successfully: {:?}\ndata: {}",
+            json_path, json_string
+        );
         Ok(())
     }
 
@@ -189,32 +206,6 @@ impl TestManager for ThurstoneManager {
 }
 
 impl ThurstoneManager {
-    fn new(
-        manager_data_root: PathBuf,
-        name: String,
-        author: String,
-        created_date: NaiveDate,
-        modified_date: NaiveDate,
-        description: String,
-        categories: Categories,
-        participants: HashMap<String, ParticipantStatus>,
-        time_limit: usize,
-    ) -> ThurstoneManager {
-        ThurstoneManager {
-            manager_data_root: manager_data_root,
-            name: name,
-            test_type: TestType::Thurstone,
-            author: author,
-            created_date: created_date,
-            modified_date: modified_date,
-            description: description,
-            categories: categories,
-            participants: participants,
-            time_limit: time_limit,
-            active_trial: None,
-        }
-    }
-
     // jsonファイルをデシリアライズして構造体を生成------------------------------------------
     pub fn from_json(path_to_test_config: PathBuf) -> Result<ThurstoneManager> {
         // ファイルがなければエラー
@@ -236,17 +227,19 @@ impl ThurstoneManager {
             ThurstoneManager::get_manager_data_root(app_data_root, name.clone())?;
         let categories = Categories::setup(info.categories)?;
 
-        return Ok(ThurstoneManager::new(
-            manager_data_root,
-            name,
-            info.author,
-            Local::now().date_naive(),
-            Local::now().date_naive(),
-            info.description,
-            categories,
-            ThurstoneManager::setup_participants(info.participants),
-            info.time_limit,
-        ));
+        return Ok(ThurstoneManager {
+            manager_data_root: manager_data_root,
+            name: name,
+            test_type: TestType::Thurstone,
+            author: info.author,
+            created_date: Local::now().date_naive(),
+            modified_date: Local::now().date_naive(),
+            description: info.description,
+            categories: categories,
+            participants: ThurstoneManager::setup_participants(info.participants),
+            time_limit: info.time_limit,
+            active_trial: None,
+        });
     }
 
     // マネージャの情報を保存するディレクトリを返す-------------------------------------------

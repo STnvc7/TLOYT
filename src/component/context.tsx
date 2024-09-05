@@ -1,6 +1,6 @@
 import {createContext, useState, useEffect, useContext, 
         ReactNode, FC, Dispatch, SetStateAction} from 'react';
-import { tauriGetSettings } from './tauri_commands.ts';
+import { tauriGetSettings } from '../tauri_commands.ts';
 
 ///アプリケーション全体の情報を保管するコンテクスト===============================================--
 //テストマネージャのリストを保管
@@ -48,15 +48,16 @@ interface TrialContextType {
 interface TrialProviderProps {
   children: ReactNode;
   test: string;
+  examinee?: string;
 }
 //-------------------------------------------------------------------------
 export const TrialContext = createContext<TrialContextType|undefined>(undefined);
-export const TrialProvider: FC<TrialProviderProps> = ({children, test }) => {
+export const TrialProvider: FC<TrialProviderProps> = ({children, test, examinee }) => {
   const app_context = useContext(AppContext);
 
   const managers = app_context?.managers || {};
   const [testName] = useState<string>(test);
-  const [examineeName, setExamineeName] = useState<string|undefined>(undefined);
+  const [examineeName, setExamineeName] = useState<string|undefined>(examinee);
   const [info] = useState(managers[test]);
   const [status, setStatus] = useState<TrialStatus>(TrialStatus.Ready);
   const context = {testName, examineeName, setExamineeName, info, status, setStatus}
@@ -65,5 +66,32 @@ export const TrialProvider: FC<TrialProviderProps> = ({children, test }) => {
     <TrialContext.Provider value={context}>
       {children}
     </TrialContext.Provider>
+  );
+};
+
+
+interface SettingContextType {
+  info: {[key: string]: any};
+  setInfo: Dispatch<SetStateAction<{[key: string]: any}>>;
+}
+interface SettingProviderProps {
+  children: ReactNode;
+  testName: string;
+}
+//-------------------------------------------------------------------------
+export const SettingContext = createContext<SettingContextType|undefined>(undefined);
+export const SettingProvider: FC<SettingProviderProps> = ({children, testName }) => {
+
+  const appContext = useContext(AppContext);
+  if (appContext === undefined) return;
+  if (appContext.managers === undefined) return;
+
+  const [info, setInfo] = useState(appContext.managers[testName]);
+  const context = {info, setInfo};
+
+  return (
+    <SettingContext.Provider value={context}>
+      {children}
+    </SettingContext.Provider>
   );
 };

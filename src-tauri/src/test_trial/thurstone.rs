@@ -9,9 +9,9 @@ use std::{fs, fs::File};
 
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
+use log::{error, info};
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
-use log::{info, error};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ABIndex {
@@ -43,7 +43,10 @@ impl ThurstoneScore {
         }
     }
     pub fn get_audio_file_path(&self) -> Vec<PathBuf> {
-        let paths = vec![self.audio_file_path_a.clone(), self.audio_file_path_b.clone()];
+        let paths = vec![
+            self.audio_file_path_a.clone(),
+            self.audio_file_path_b.clone(),
+        ];
         info!("get audio files: {:?}", paths);
         paths
     }
@@ -122,7 +125,7 @@ impl ThurstoneTrial {
         let trial_data_root = ThurstoneTrial::get_trial_data_root(manager_data_root.clone())?;
         let score_list = ThurstoneTrial::generate_score_list(manager_data_root, categories)?;
 
-        info!("new trial for thurstone method is generated: {:?}", &examinee);
+        info!("new trial for Thurstone method: {:?}", &examinee);
         Ok(ThurstoneTrial {
             trial_data_root: trial_data_root,
             examinee: examinee,

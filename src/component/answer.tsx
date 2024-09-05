@@ -2,29 +2,12 @@ import { useContext, useState, useEffect, ReactNode, FC } from 'react';
 import { PiSpeakerHighFill } from "react-icons/pi";
 import {Radio, RadioGroup} from '@headlessui/react';
 import { convertFileSrc } from "@tauri-apps/api/tauri";
+import { Command } from '@tauri-apps/api/shell';
 import { Howl } from 'howler';
 
-import { tauriGetAudio, tauriSetScore, tauriCloseTest } from './tauri_commands.ts';
+import { tauriGetAudio, tauriSetScore, tauriCloseTest, tauriClosePreview } from '../tauri_commands.ts';
 import { TrialContext, TrialStatus } from "./context.tsx";
 
-// 回答欄のコンポーネント========================================================
-export const Answer=() =>{
-	const context = useContext(TrialContext);
-	if (context === undefined){
-		return null
-	}
-
-	const scoreMap: {[key in string]: ReactNode} = {
-		"Mos": <MosAnswer/>,
-		"Thurstone": <ThurstoneAnswer/>
-	}
-	// jsx---------------------------------------------------------------
-	return (
-		<div className="justify-center items-center">
-			{scoreMap[context.info.test_type]}
-		</div>
-	);
-};
 
 // 回答コンポーネントの状態を示す列挙型============================================
 enum AnswerState{
@@ -35,19 +18,63 @@ enum AnswerState{
 	Finished
 }
 
+const closeTrial= async() =>{
+	const trialContext = useContext(TrialContext);
+	if (trialContext === undefined) return;
+
+	if (trialContext.examineeName === undefined){
+		return
+	}
+	await tauriCloseTest(trialContext.examineeName).then(() => {
+		trialContext.setStatus(TrialStatus.Finished);
+	}).catch((err) => console.error(err));
+}
+
+const closePreview =async()=> {
+    tauriClosePreview().then(() => {
+      console.log("プレビューを終了")
+    }).catch((e) => console.error(e));
+}
+
+// 回答欄のコンポーネント========================================================
+interface AnswerProps {
+	preview?: boolean;
+}
+export const Answer: FC<AnswerProps> =({preview}) =>{
+	const trialContext = useContext(TrialContext);
+	if (trialContext === undefined){
+		return null
+	}
+
+	const onClose = preview === true ? closePreview : closeTrial;
+
+	const scoreMap: {[key: string]: ReactNode} = {
+		"Mos": <MosAnswer onClose={onClose}/>,
+		"Thurstone": <ThurstoneAnswer onClose={onClose}/>
+	}
+	// jsx---------------------------------------------------------------
+	return (
+		<div className="justify-center items-center">
+			{scoreMap[trialContext.info.test_type]}
+		</div>
+	);
+};
+
 // MOSテストの回答ページ====================================================
-const MosAnswer=()=>{
-	const context = useContext(TrialContext);
-	if (context === undefined){
+interface MosAnswerProps {
+	onClose: () => void;
+}
+const MosAnswer: FC<MosAnswerProps>=(props)=>{
+	const trialContext = useContext(TrialContext);
+	if (trialContext === undefined){
 		return null
 	}
 
 	const [state, setState] = useState<AnswerState>(AnswerState.Preparing);
 	const [count, setCount] = useState<number>(1);
-	const [selectedScore, setSelectedScore] = useState<number>(0);
+	const [selectedScore, setSelectedScore] = useState<number>(3); //3 -> 普通
 	const [sound, setSound] = useState<Howl|undefined>(undefined);
 
-	const labelList = ["非常に悪い", "悪い", "普通", "良い", "非常に良い"];
 
 	// 音声ファイルをバックエンドから取得してくる-----------------------------
 	const getSound= async() => {
@@ -63,30 +90,21 @@ const MosAnswer=()=>{
 
     // スコア保存--------------------------------------------------------------
 	const setScore= async() => {
-		await tauriSetScore([String(selectedScore)]).then((result_status) => {
-			switch (result_status) {
+		await tauriSetScore([String(selectedScore)]).then((resultStatus) => {
+			switch (resultStatus) {
             //テスト継続 => カウントアップしてPreparingに戻る----------
 			case "Doing":
 				setCount((prevCount) => prevCount + 1);
+				setSelectedScore(3);
 				setState(AnswerState.Preparing);
 				break;
             //テスト終了 => 終了処理----------------------------------
 			case "Done":
-				closeTrial();
-				break;
+				props.onClose();
+				return;
 			}
 		}).catch((err) => console.error(err));
 	};
-
-    // テストの終了処理----------------------------------------------------------
-	const closeTrial= async() =>{
-        if (context.examineeName === undefined){
-            return
-        }
-		await tauriCloseTest(context.examineeName).then(() => {
-			context.setStatus(TrialStatus.Finished);
-		}).catch((err) => console.error(err));
-	}
 
 	// stateが変更されたときの処理---------------------------------------------
 	useEffect(()=>{
@@ -117,7 +135,7 @@ const MosAnswer=()=>{
 			const elem = 	
 			(<div key={i} className="flex flex-col items-center w-1/5">
 				<input type='radio' name='score' value={i+1}
-				defaultChecked={i===2} onChange={() => setSelectedScore(i+1)} />
+				checked={i+1===selectedScore} onChange={() => setSelectedScore(i+1)} />
 				<label htmlFor={String(i)} className="text-center">{label}</label>
 			</div>)
     	l.push(elem);
@@ -143,18 +161,20 @@ const MosAnswer=()=>{
             {/* 回答時間のプログレスバー------------------------------ */}
 			<div className="w-full self-center">
 	    		<p className="mb-4">回答時間</p>
-			    <ProgressBar time_limit={context.info.time_limit} state={state}
+			    <ProgressBar time_limit={trialContext.info.time_limit} state={state}
 			    onEnd={() => setState(AnswerState.Finished)}/>
 		    </div>
 	    </div>
 	);
 };
 
-
+interface ThurstoneAnswerProps {
+	onClose: ()=> void;
+}
 // サーストン法の回答ページ====================================================
-const ThurstoneAnswer=()=>{
-	const context = useContext(TrialContext);
-	if (context === undefined){
+const ThurstoneAnswer: FC<ThurstoneAnswerProps> =(props)=>{
+	const trialContext = useContext(TrialContext);
+	if (trialContext === undefined){
 		return null
 	}
 	const [state, setState] = useState<AnswerState>(AnswerState.Preparing);
@@ -182,27 +202,17 @@ const ThurstoneAnswer=()=>{
 
     // スコアを保存-------------------------------------------------------------
 	const setScore= async() => {
-		await tauriSetScore([String(selectedScore)]).then((result_status) => {
-			if (result_status === "Doing"){
+		await tauriSetScore([String(selectedScore)]).then((resultStatus) => {
+			if (resultStatus === "Doing"){
 				setCount((prevCount) => prevCount + 1);
 				setSelectedScore('A');
 				setState(AnswerState.Preparing);		
 			}
-			else if (result_status === "Done"){
-				closeTrial();
+			else if (resultStatus === "Done"){
+				props.onClose();
 			}
 		}).catch((err) => console.error(err));
 	};
-
-    // テストの終了処理----------------------------------------------------------
-	const closeTrial= async() =>{
-        if (context.examineeName === undefined) {
-            return
-        }
-		await tauriCloseTest(context.examineeName).then(() => {
-			context.setStatus(TrialStatus.Finished);
-		}).catch((err) => console.error(err));
-	}
 
 	// stateが変更されたときの処理----------------------------------
 	useEffect(()=>{
@@ -245,7 +255,6 @@ const ThurstoneAnswer=()=>{
 			    	{(state == AnswerState.AudioPlaying) && ABIndex=="A" ? 
 			    	"animate-pulse text-blue-700" : "opacity-0"}/>
 					<Radio value='A' className="px-8 py-4 rounded-lg cursor-pointer text-center text-2xl bg-gray-50 data-[checked]:bg-blue-500 data-[checked]:text-white">A</Radio>
-        		    {/* <input type='radio' name='score' value="A" onChange={()=>setSelectedScore("A")} defaultChecked/> */}
     			</div>
                 {/* Bの回答部分-------------------------------- */}
 				<div key="B" className="flex flex-col items-center space-y-2">
@@ -254,13 +263,12 @@ const ThurstoneAnswer=()=>{
 			    	{(state == AnswerState.AudioPlaying) && ABIndex=="B" ? 
 			    	"animate-pulse text-blue-700" : "opacity-0"}/>
 					<Radio value='B' className="px-8 py-4 rounded-lg cursor-pointer text-center text-2xl bg-gray-50 data-[checked]:bg-blue-500 data-[checked]:text-white">B</Radio>
-        		    {/* <input type='radio' name='score' value="B" onChange={()=>setSelectedScore("B")} /> */}
     			</div>
 	        </RadioGroup>
             {/* 回答時間のプログレスバー -------------------------------------- */}
 	    	<div className="w-full self-center">
 	    		<p className="my-4">回答時間</p>
-			    <ProgressBar time_limit={context.info.time_limit} state={state}
+			    <ProgressBar time_limit={trialContext.info.time_limit} state={state}
 			    onEnd={() => setState(AnswerState.Finished)}/>
 		    </div>
 	    </div>

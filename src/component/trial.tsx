@@ -1,4 +1,4 @@
-import { useContext, useState, ReactNode, ChangeEvent } from 'react';
+import { useContext, useState, ReactNode, ChangeEvent, FC } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { IoIosArrowRoundBack } from "react-icons/io";
 import { invoke } from "@tauri-apps/api/tauri";
@@ -7,8 +7,8 @@ import "../App.css";
 import { TrialContext, TrialProvider, TrialStatus } from "./context.tsx";
 import { TextButton } from "./button.tsx";
 import { Answer } from './answer.tsx';
-import { testTypeToString } from './tauri_commands.ts';
-
+import { testTypeToString, tauriStartTest } from '../tauri_commands.ts';
+import { MarkdownRenderer } from './markdown.tsx';
 
 
 /*==============================================================
@@ -20,17 +20,27 @@ TrialContextのメンバ
 - info（テスト自体の情報(時間制限などを見るため)
 - status（テストの進行状態 Ready, Doing, Finishedのどれか）, setStatus
 */
-export const Trial=() => {
-	const {test} = useParams(); //URLからテスト名を取得
-	if (test === undefined) {
+export const TrialFromURL=() => {
+	const {test, examinee} = useParams(); //URLからテスト名を取得
+	if (test === undefined || examinee === undefined) {
 		return null
 	}
 	return (
-		<TrialProvider test={test}>
-			<TrialComponent/>
-		</TrialProvider>
+		<Trial test={test} examinee={examinee}/>
 	);
 };
+
+interface TrialProps {
+	test: string;
+	examinee: string;
+}
+export const Trial: FC<TrialProps> = ({test, examinee})=> {
+	return (
+		<TrialProvider test={test} examinee={examinee}>
+			<TrialComponent/>
+		</TrialProvider>
+	);	
+}
 
 
 /*==================================================================
@@ -40,7 +50,7 @@ const TrialComponent=() =>{
 	// jsx---------------------------------------------------------------
 	return (
 		<div className="flex h-screen">
-			<div className="flex w-2/5 bg-gray-100 p-8">
+			<div className="flex w-2/5 bg-gray-100 p-6">
 				<TestAbstract/>
 			</div>
 			<div className="flex w-3/5 p-8 items-center">
@@ -60,13 +70,16 @@ const TestAbstract=() =>{
 	if (trialContext === undefined){
 		return null
 	}
+
 	// jsx---------------------------------------------------------------
 	return (
-		<div className="overflow-auto">
+		<div className="overflow-auto flex flex-col">
 			{trialContext.status!=TrialStatus.Doing ? (<BackToHomeButton/>) : (null)}
 			<p className="text-xl text-left font-medium text-black">{trialContext.testName}</p>
-			<p className="text-left text-gray-400 pb-6">{testTypeToString(trialContext.info.test_type)}</p>
-			<p className="break-all">{trialContext.info.description}</p>
+			<p className="text-left text-gray-400 pb-5 border-b-2">{testTypeToString(trialContext.info.test_type)}</p>
+			<div className="pt-5 prose">
+				<MarkdownRenderer>{trialContext.info.description}</MarkdownRenderer>
+			</div>
 		</div>
 	);
 };
@@ -126,14 +139,14 @@ const AnswerComponent=()=>{
 */
 const ReadyTrial=()=>{
 	const trialContext = useContext(TrialContext);
-	if (trialContext === undefined){
-		return null
-	}
-	const [selectedExaminee, setSelectedExaminee] = useState<string>();
+	if (trialContext === undefined) return;
+
+	const defaultExaminee = trialContext.examineeName !== undefined ? trialContext.examineeName : "undefined";
+	const [selectedExaminee, setSelectedExaminee] = useState<string>(defaultExaminee);
 
 	// 受験者を選択するセレクタのオプションとなるReactNodeのリストを生成---------------
 	const getParticipantOption = ()=>{
-		let l: ReactNode[] = [<option key="" value="">受験者を選択</option>]
+		let l: ReactNode[] = [<option key="" value="undefined">受験者を選択</option>]
 		for (let [name, status] of Object.entries(trialContext.info.participants)) {
 			if (status!='Done') l.push(<option key={name} value={name}>{name}</option>);
 		}
@@ -146,11 +159,15 @@ const ReadyTrial=()=>{
 
 	// テストを開始する----------------------------------------------------
 	const startTrial= async ()=>{
-	    if (selectedExaminee) {
-	      await invoke("start_test", {test_name: trialContext.testName, examinee: selectedExaminee })
-	      .catch(err => console.error("Error invoking start_test:", err));
-	      trialContext.setExamineeName(selectedExaminee);
-	      trialContext.setStatus(TrialStatus.Doing);
+	    if (selectedExaminee !== "undefined") {
+			await invoke("start_test", {test_name: trialContext.testName, examinee: selectedExaminee })
+			.catch(err => console.error("Error invoking start_test:", err));
+			tauriStartTest(trialContext.testName, selectedExaminee).then(() => {
+				trialContext.setExamineeName(selectedExaminee);
+				trialContext.setStatus(TrialStatus.Doing);
+			}).catch((e) => {
+				alert(e);
+			});
 	    } else {
 	      alert("受験者を選択してください");
 	    }

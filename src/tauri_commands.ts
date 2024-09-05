@@ -61,6 +61,18 @@ export const tauriDeleteTest = async (testName: string): Promise<void> => {
     });
 };
 
+export const tauriStartTest = async (
+  testName: string,
+  examineeName: string
+): Promise<void> => {
+  return invoke("start_test", { test_name: testName, examinee: examineeName })
+    .then(() => {})
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
+};
+
 export const tauriGetAudio = (): Promise<string[]> => {
   return invoke<string[]>("get_audio")
     .then((paths) => {
@@ -85,6 +97,36 @@ export const tauriSetScore = (score: string[]): Promise<string> => {
 
 export const tauriCloseTest = async (examineeName: string): Promise<void> => {
   return invoke("close_test", { examinee: examineeName })
+    .then(() => {})
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
+};
+
+export const tauriDeleteTrial = async (
+  testName: string,
+  examineeName: string
+): Promise<void> => {
+  return invoke("delete_trial", { test_name: testName, examinee: examineeName })
+    .then(() => {})
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
+};
+
+export const tauriStartPreview = async (testName: string): Promise<void> => {
+  return invoke("start_preview", { test_name: testName })
+    .then(() => {})
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
+};
+
+export const tauriClosePreview = async (): Promise<void> => {
+  return invoke("close_preview")
     .then(() => {})
     .catch((err) => {
       console.error(err);

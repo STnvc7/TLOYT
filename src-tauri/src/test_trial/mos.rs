@@ -7,9 +7,9 @@ use std::path::PathBuf;
 use std::{fs, fs::File};
 
 use anyhow::{anyhow, Result};
+use log::{error, info};
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
-use log::{info, error};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MosScore {
@@ -30,7 +30,7 @@ impl MosScore {
     pub fn get_audio_file_path(&self) -> PathBuf {
         let path = self.audio_file_path.clone();
         info!("get audio file: {:?}", &path);
-        return path
+        return path;
     }
     pub fn set_score(&mut self, score: isize) {
         self.score = Some(score);
@@ -91,7 +91,7 @@ impl MosTrial {
         let trial_data_root = MosTrial::get_trial_data_root(manager_data_root.clone())?;
         let score_list = MosTrial::generate_score_list(manager_data_root, categories, num_repeat)?;
 
-        info!("new trial for MOS is generated: {:?}", &examinee);
+        info!("new trial for MOS: {:?}", &examinee);
         Ok(MosTrial {
             trial_data_root: trial_data_root,
             examinee: examinee,
@@ -134,7 +134,7 @@ impl MosTrial {
         file_list.shuffle(&mut rand::thread_rng());
 
         let score_list = [dummy_list, file_list].concat();
-        
+
         info!("generate score list");
         Ok(score_list)
     }
