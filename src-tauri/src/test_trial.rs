@@ -1,15 +1,9 @@
-pub mod thurstone;
 pub mod mos;
+pub mod thurstone;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum ScoreType {
-    Valid,
-    Dummy,
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum TrialStatus {

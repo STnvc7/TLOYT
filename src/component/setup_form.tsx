@@ -60,6 +60,10 @@ export const getDefaultSetupValue= (testType: tauriTestType, info?: {[key: strin
   return defaultValues
 }
 
+
+
+
+
 //===========================================================================
 interface SetupFormComponentProps {
   testType: tauriTestType;
@@ -114,6 +118,15 @@ export const SetupForm: FC<SetupFormComponentProps> = ({testType, edit, defaultI
     };
 
     //jsx--------------------------------------------------------------------------------------
+    /*
+    <テスト名>
+    <作成者名>
+    <テストの説明>
+    <カテゴリの設定>
+    <参加者リスト>
+    <制限時間>
+    <テストの種類による項目>
+    */
     return (
       <FormProvider {...methods}>
         <form id={id} className="w-full flex flex-col space-y-4" onSubmit={handleSubmit(submitHandler)}>
@@ -129,7 +142,7 @@ export const SetupForm: FC<SetupFormComponentProps> = ({testType, edit, defaultI
               <p className={labelStyle}>説明</p>
               <textarea className={overrideTailwindClasses(`${inputStyle} w-full`)} rows={6} {...register("description")}/>
             </div>
-            <CategoryInput/>
+            <CategoryInput edit={edit}/>
             <ParticipantsInput edit={edit}/>
             <div>
               <p className={labelStyle}>制限時間</p>
@@ -146,7 +159,10 @@ export const SetupForm: FC<SetupFormComponentProps> = ({testType, edit, defaultI
 }
 
 // カテゴリの選択================================================================================
-const CategoryInput= ()=> {
+interface CategoryInputProps {
+  edit: boolean
+}
+const CategoryInput: FC<CategoryInputProps> = ({edit})=> {
   const [categories, setCategories] = useState<[string, string][]>([]);
   const {setValue, getValues} = useFormContext();
 
@@ -186,12 +202,19 @@ const CategoryInput= ()=> {
     updateCategories([...categories, [name, path]]);
   }
   // jsx------------------------------------------------------------------------
+  /*
+  カテゴリ <選択ボタン>
+  <追加されたカテゴリのリスト>
+  ...
+  <追加されたカテゴリのリスト>
+
+  */
   return (
     <div>
       <div className="flex flex-row space-x-2 place-items-center">
         <p className={labelStyle}>カテゴリ</p>
         <TextButton text='選択' type='button' className="text-xs px-4 py-1 rounded-md"
-          onClick={openDialoge}/>
+          onClick={openDialoge} disabled={edit}/>
       </div>
       <div className="pt-4 flex flex-col space-y-1">
         {Object.entries(categories).map(([i, category]) => (
@@ -200,9 +223,9 @@ const CategoryInput= ()=> {
               <p className="text-xs">{category[1]}</p>
               <div className="flex flex-row space-x-2 justify-between place-items-center">
                 <input type="text" defaultValue={category[0]} className={overrideTailwindClasses(`${inputStyle} w-10/12 text-sm`)} 
-                onChange={(e) => changeCategoryName(Number(i), e.target.value)}/>
+                onChange={(e) => changeCategoryName(Number(i), e.target.value)} disabled={edit}/>
                 <RemoveButton text='削除' className='w-2/12 text-xs px-4 py-1 rounded-md' type='button' 
-                onClick={() => {removeCategory(Number(i))}}/>
+                onClick={() => {removeCategory(Number(i))}} disabled={edit}/>
               </div>
             </div>
           </ListElement>))}    
@@ -251,6 +274,11 @@ const ParticipantsInput: FC<ParticipantsInputProps> =({edit})=> {
   };
 
   //jsx----------------------------------------------------------------------
+  /*
+  <参加者名>  <削除ボタン>
+
+  削除ボタン：編集モードではdisabled
+  */
   return (
     <div>
       <p className={labelStyle}>実験参加者</p>

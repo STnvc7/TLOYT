@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/tauri";
 
 export type tauriTestType = "Mos" | "Thurstone";
+
 export const testTypeToString = (testType: tauriTestType): string => {
   switch (testType) {
     case "Mos":

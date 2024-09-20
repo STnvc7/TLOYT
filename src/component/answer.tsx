@@ -2,7 +2,6 @@ import { useContext, useState, useEffect, ReactNode, FC } from 'react';
 import { PiSpeakerHighFill } from "react-icons/pi";
 import {Radio, RadioGroup} from '@headlessui/react';
 import { convertFileSrc } from "@tauri-apps/api/tauri";
-import { Command } from '@tauri-apps/api/shell';
 import { Howl } from 'howler';
 
 import { tauriGetAudio, tauriSetScore, tauriCloseTest, tauriClosePreview } from '../tauri_commands.ts';
@@ -18,24 +17,6 @@ enum AnswerState{
 	Finished
 }
 
-const closeTrial= async() =>{
-	const trialContext = useContext(TrialContext);
-	if (trialContext === undefined) return;
-
-	if (trialContext.examineeName === undefined){
-		return
-	}
-	await tauriCloseTest(trialContext.examineeName).then(() => {
-		trialContext.setStatus(TrialStatus.Finished);
-	}).catch((err) => console.error(err));
-}
-
-const closePreview =async()=> {
-    tauriClosePreview().then(() => {
-      console.log("プレビューを終了")
-    }).catch((e) => console.error(e));
-}
-
 // 回答欄のコンポーネント========================================================
 interface AnswerProps {
 	preview?: boolean;
@@ -46,6 +27,22 @@ export const Answer: FC<AnswerProps> =({preview}) =>{
 		return null
 	}
 
+	const closeTrial= async() =>{
+		if (trialContext.examineeName === undefined){
+			return
+		}
+		tauriCloseTest(trialContext.examineeName).then(() => {
+			trialContext.setStatus(TrialStatus.Finished);
+		}).catch((err) => console.error(err));
+	}
+	
+	const closePreview = async() => {
+		tauriClosePreview().then(() => {
+		  console.log("プレビューを終了")
+		}).catch((e) => console.error(e));
+	}
+
+	
 	const onClose = preview === true ? closePreview : closeTrial;
 
 	const scoreMap: {[key: string]: ReactNode} = {

@@ -1,6 +1,6 @@
 use crate::constants::{CATEGORIES_DIRNAME, TRIAL_DIRNAME};
 use crate::test_manager::Categories;
-use crate::test_trial::{ScoreType, TestTrial, TrialStatus};
+use crate::test_trial::{TestTrial, TrialStatus};
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -10,6 +10,12 @@ use anyhow::{anyhow, Result};
 use log::{error, info};
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum ScoreType {
+    Valid,
+    Dummy,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MosScore {

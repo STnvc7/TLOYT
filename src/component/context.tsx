@@ -70,6 +70,7 @@ export const TrialProvider: FC<TrialProviderProps> = ({children, test, examinee 
 };
 
 
+//======================================================================================
 interface SettingContextType {
   info: {[key: string]: any};
   setInfo: Dispatch<SetStateAction<{[key: string]: any}>>;
