@@ -213,8 +213,9 @@ const CategoryInput: FC<CategoryInputProps> = ({edit})=> {
     <div>
       <div className="flex flex-row space-x-2 place-items-center">
         <p className={labelStyle}>カテゴリ</p>
-        <TextButton text='選択' type='button' className="text-xs px-4 py-1 rounded-md"
-          onClick={openDialoge} disabled={edit}/>
+        {edit ? (null) : 
+        <TextButton text='選択' type='button' className="text-xs px-4 py-1 rounded-md" onClick={openDialoge}/>
+        }
       </div>
       <div className="pt-4 flex flex-col space-y-1">
         {Object.entries(categories).map(([i, category]) => (
@@ -296,16 +297,19 @@ const ParticipantsInput: FC<ParticipantsInputProps> =({edit})=> {
         </div>
       )}
 
-      <div className="mt-2 flex flex-row space-x-2 justify-between">
-        <input type='text' value={currentParticipant} onChange={(e) => setCurrentParticipant(e.target.value)} 
-        className={overrideTailwindClasses(`${inputStyle} w-10/12 text-sm`)}/>
-        <TextButton text="追加" type='button' onClick={()=>addParticipant()} className="w-2/12 text-xs px-4 py-1 rounded-md" disabled={currentParticipant == ""}/>
-      </div>
+      {edit ? (null) :
+        <div className="mt-2 flex flex-row space-x-2 justify-between">
+          <input type='text' value={currentParticipant} onChange={(e) => setCurrentParticipant(e.target.value)} 
+           className={overrideTailwindClasses(`${inputStyle} w-10/12 text-sm`)}/>
+          <TextButton text="追加" type='button' onClick={()=>addParticipant()} className="w-2/12 text-xs px-4 py-1 rounded-md" disabled={currentParticipant == ""}/>
+        </div>
+      }
     </div>
   )
 }
 
-//テストタイプに応じた設定--------------------------
+
+//テストタイプに応じた設定========================================================
 interface TestSpecificInputProps {
   testType: tauriTestType;
 }

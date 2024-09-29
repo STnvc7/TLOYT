@@ -9,30 +9,38 @@ import { AppContext, SettingContext, SettingProvider, TrialProvider } from "./co
 import { TextButton, RemoveButton} from "./button.tsx";
 import { ListElement } from "./list.tsx";
 import { SetupForm, getDefaultSetupValue } from "./setup_form.tsx";
-import { Aggregation } from "./aggretate.tsx";
+import { Aggregation } from "./aggregation.tsx";
 import { Answer } from "./answer.tsx";
 
 import { confirm } from '@tauri-apps/api/dialog';
 
+// 設定パネルのメニューの項目 ===================
 type MenuType = "edit" | "participants" | "aggregate" | "preview";
 const menuList: Record<MenuType, string> = {"edit": "テストの編集", "participants": "実験参加者", 
                                             "aggregate": "集計", "preview":"プレビュー"}
+
+// 設定更新後にAppContextも変更されるので，設定変更後すぐに設定コンポーネントが再レンダリングされる
+// 再レンダリング後も設定パネルのメニュー項目を保持しておくためのグローバル変数を
+let SELECTED_MENU: MenuType = "edit";
+
+// 設定コンポーネント===================================================
 interface SettingProps {
     testName: string;
 }
-let selectedMenu: MenuType = "edit";    //再レンダリングで設定項目が変更されないようにグローバル変数化
 export const Setting: FC<SettingProps> = ({testName})=> {
 
-    const [menu, setMenu] = useState<MenuType>(selectedMenu);
+    const [menu, setMenu] = useState<MenuType>(SELECTED_MENU);
 
     const onChange = (value: MenuType) => {
         setMenu(value);
-        selectedMenu = value;
+        SELECTED_MENU = value;
     }
 
     return (
       <div className='flex flex-row h-full rounded-lg'>
-          <div className="w-1/4 h-full bg-gray-200 p-3">
+
+        {/*サイドバー---------------------------*/}
+        <div className="w-1/4 h-full bg-gray-200 p-3 rounded-lg">
           <RadioGroup value={menu} onChange={onChange} className='grid grid-cols-1'>
           {Object.entries(menuList).map(([value, label])=>(
               <Radio key={value} value={value} className="group flex flex-row space-x-2 items-center">
@@ -44,14 +52,18 @@ export const Setting: FC<SettingProps> = ({testName})=> {
               </Radio>               
           ))}
           </RadioGroup>
-          </div>
-          <div className="w-3/4 h-full overflow-auto">
-              <SettingPanel menu={menu} testName={testName}/>
-          </div>
+        </div>
+
+        {/*設定パネル-------------------------------*/}
+        <div className="w-3/4 h-full overflow-auto">
+            <SettingPanel menu={menu} testName={testName}/>
+        </div>
+
       </div>
     )
 }
 
+// 設定パネルを表示するコンポーネント===========================================
 interface SettingPanelProps {
     menu: MenuType;
     testName: string;
@@ -86,18 +98,19 @@ const SettingPanel: FC<SettingPanelProps> = ({menu, testName}) => {
   )
 }
   
-  
+
+// 編集パネル========================================================
 const EditPanel = () => {
   const appContext = useContext(AppContext);
-  if(appContext===undefined) return;
+  if(appContext===undefined) return null;
 
   const settingContext = useContext(SettingContext);
-  if (settingContext === undefined) return;
+  if (settingContext === undefined) return null;
   const info = settingContext.info;
 
   const removeButtonHandler = async ()=> {
     const isOk = await confirm("テストを削除してもよろしいですか？");
-    if (isOk == false) return;
+    if (isOk == false) return null;
 
     tauriDeleteTest(info.name).then(() => {
       return tauriGetSettings()
@@ -119,12 +132,15 @@ const EditPanel = () => {
   )
 };
 
+//参加者パネル==================================================
+// 参加者の削除，追加，テスト結果の削除をおこなう
+
 const ParticipantsPanel= () => {
   
   const appContext = useContext(AppContext);
-  if (appContext === undefined) return;
+  if (appContext === undefined) return null;
   const settingContext = useContext(SettingContext);
-  if (settingContext === undefined) return;
+  if (settingContext === undefined) return null;
   const info = settingContext.info;
 
   const [currentParticipant, setCurrentParticipant] = useState<string>("");
@@ -147,7 +163,7 @@ const ParticipantsPanel= () => {
   return (
     <div>
       {(Object.entries(info.participants) as [string, "Done"|"Yet"][]).map(([name, status]) => (
-        <div key={name} className="border-b-2 border-dashed">
+        <div key={name} className="">
           <Participant participantName={name} participantStatus={status}/>
         </div>
       ))}
@@ -162,6 +178,8 @@ const ParticipantsPanel= () => {
   )
 }
 
+
+// 各参加者の状態と可能な動作を表示するコンポーネント----------------------------------
 interface ParticipantProps{
   participantName: string;
   participantStatus: "Done" | "Yet";
@@ -170,10 +188,10 @@ const Participant: FC<ParticipantProps> =({participantName, participantStatus})=
   const navigate = useNavigate();
 
   const appContext = useContext(AppContext);
-  if (appContext === undefined ) return;
+  if (appContext === undefined ) return null;
 
   const settingContext = useContext(SettingContext);
-  if (settingContext === undefined) return;
+  if (settingContext === undefined) return null;
   const info = settingContext.info;
 
   //テストを開始---------------------------------------------------
@@ -216,7 +234,7 @@ const Participant: FC<ParticipantProps> =({participantName, participantStatus})=
   }
 
   //-----------------------------------------------------------------
-  const ParticipantInfo =()=> {
+  const ParticipantAction=()=> {
     let statusLabel: ReactNode;
     let actionButton: ReactNode;
 
@@ -246,23 +264,29 @@ const Participant: FC<ParticipantProps> =({participantName, participantStatus})=
     )
   }
 
+  //jsx-----------------------------------------------
   return (
-    <div className="py-2 flex flex-row items-center">
-      <p className="w-2/5">{participantName}</p>
-      <ParticipantInfo/>
+    <div className="py-2 flex flex-row items-center border-b">
+      <div className="w-2/5">
+      <ListElement>
+        {participantName}
+      </ListElement>
+      </div>
+      <ParticipantAction/>
     </div>
   )
 }
 
 
+// プレビューパネル=============================================================
 const PreviewPanel =()=> {
   const settingContext = useContext(SettingContext);
   if (settingContext === undefined) return;
   const info = settingContext.info;
 
   const [isStart, setIsStart] = useState<boolean>(false);
-  
-  const startPreview =()=> {
+
+  const startPreview =async ()=> {
     setIsStart(true)
     tauriStartPreview(info.name).then(() => {
       console.log("start preview")
@@ -283,17 +307,20 @@ const PreviewPanel =()=> {
       </TrialProvider>
     )
   }
+
   return (
     <div className="flex flex-col">
-      <div className="flex flex-row space-x-2 mb-6">
+      {isStart ? (null) : 
         <TextButton text="プレビューを開始" className="py-2 px-4 font-bold" type='button'
-        onClick={startPreview} disabled={isStart===true}/>
-        <RemoveButton text="プレビューを終了" className="py-2 px-4 font-bold" type='button'
-        onClick={closePreview} disabled={isStart===false}/>
-
-      </div>
+        onClick={startPreview}/>}
       <div className="p-2">
         {isStart ? <Preview/> : (null)}
+      </div>
+
+      <div className="flex justify-end mt-10">
+        {isStart ? 
+        <RemoveButton text="終了" className="py-2 px-4 font-bold" type='button'
+        onClick={closePreview}/> : null}
       </div>
 
     </div>

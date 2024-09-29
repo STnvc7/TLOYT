@@ -15,6 +15,7 @@
     "@tauri-apps/api": "^1",
     "@tauri-apps/plugin-log": "^2.0.0-rc.0",
     "latest": "^0.2.0",
+    "mathjs": "^13.1.1",
     "path-browserify": "^1.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -23,6 +24,8 @@
     "react-icons": "^5.2.1",
     "react-markdown": "^9.0.1",
     "react-router-dom": "^6.25.1",
+    "recharts": "^2.13.0-alpha.5",
+    "simple-statistics": "^7.8.5",
     "tailwind-override": "^0.6.1",
     "tauri-plugin-log-api": "github:tauri-apps/tauri-plugin-log#v1",
     "yup": "^1.4.0"
