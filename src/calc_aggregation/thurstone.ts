@@ -1,5 +1,6 @@
 import { fs } from "@tauri-apps/api"
-
+import * as math from 'mathjs';
+import { normal } from "jstat";
 
 interface ThurstoneScore {
     category_a: string;
@@ -64,6 +65,23 @@ export const getResultTableThurstone= async(categories: string[], fileEntries: f
 }
 
 
-export const getResultThurstone= (resultTable: Record<string, Record<string, number>>): Record<String, number> => {
-    
+export const getResultThurstone= (resultTable: Record<string, Record<string, number>>): Record<string, number> => {
+
+    const categories = Object.keys(resultTable);
+    const scoreTable = Object.values(resultTable).map((row) => (Object.values(row)));
+    const numData = scoreTable[0][1] + scoreTable[1][0];
+
+    const zMatrix = scoreTable.map(scoreRow => (
+                    scoreRow.map(score => {
+                        if(score == 0) return 0;
+                        const probability = score / numData;
+                        const mean = 0;
+                        const std = 1;
+                        return normal.inv(probability, mean, std);
+                    })));
+    const zMean: number[] = zMatrix.map(scoreRow => (math.mean(scoreRow)));
+
+    const result = Object.fromEntries(categories.map((category, idx) => [category, zMean[idx]]));
+
+    return result
 }

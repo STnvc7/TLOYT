@@ -43,7 +43,6 @@ export const getResultTableMos = async (categories: string[], fileEntries: fs.Fi
     for(let entry of fileEntries){
         const jsonString = await fs.readTextFile(entry.path);
         const parsedData = JSON.parse(jsonString) as MosScore[];
-
         const analyzedData = analyzeDataMos(parsedData);
         for(let [category, scores] of Object.entries(analyzedData)){
             resultTable[category] = [...resultTable[category], ...scores]

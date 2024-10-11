@@ -10,7 +10,7 @@ import { TextButton, RemoveButton} from "./button.tsx";
 import { ListElement } from "./list.tsx";
 import { SetupForm, getDefaultSetupValue } from "./setup_form.tsx";
 import { Aggregation } from "./aggregation.tsx";
-import { Answer } from "./answer.tsx";
+import { Answer } from "./answer/answer.tsx";
 
 import { confirm } from '@tauri-apps/api/dialog';
 
@@ -20,7 +20,7 @@ const menuList: Record<MenuType, string> = {"edit": "テストの編集", "parti
                                             "aggregate": "集計", "preview":"プレビュー"}
 
 // 設定更新後にAppContextも変更されるので，設定変更後すぐに設定コンポーネントが再レンダリングされる
-// 再レンダリング後も設定パネルのメニュー項目を保持しておくためのグローバル変数を
+// 再レンダリング後も設定パネルのメニュー項目を保持しておくためのグローバル変数
 let SELECTED_MENU: MenuType = "edit";
 
 // 設定コンポーネント===================================================
@@ -281,7 +281,7 @@ const Participant: FC<ParticipantProps> =({participantName, participantStatus})=
 // プレビューパネル=============================================================
 const PreviewPanel =()=> {
   const settingContext = useContext(SettingContext);
-  if (settingContext === undefined) return;
+  if (settingContext === undefined) return null;
   const info = settingContext.info;
 
   const [isStart, setIsStart] = useState<boolean>(false);

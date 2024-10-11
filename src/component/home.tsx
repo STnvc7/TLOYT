@@ -13,6 +13,7 @@ import { Setting } from "./setting.tsx";
 
 //=======================================================================
 export const Home = () => {
+
   const location = useLocation();
   const appContext = useContext(AppContext);
   if (appContext === undefined) return;
@@ -26,6 +27,7 @@ export const Home = () => {
       });
     }
   }, [location]);
+
 
   // jsx---------------------------------------------------------------
   return (
@@ -78,19 +80,6 @@ const AddTestButton =()=>{
   if (appContext === undefined) return null;
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
-  const [testType, setTestType] = useState<tauriTestType>("Mos");
-
-  //テストタイプのセレクタ-------------------------------------------------------
-  const TestTypeSelector=()=> {
-    return (
-      <div className="text-lg">
-        <select value={testType} onChange={(e)=> setTestType(e.target.value as tauriTestType)}>
-          <option key="Mos" value="Mos" >平均オピニオン評価 (MOS)</option>
-          <option key="Thurstone" value="Thurstone">一対比較法 (サーストン法)</option>
-        </select>
-      </div>
-    )
-  }
   
   //モーダルウィンドウを閉じる------------------------------------
   const closeModal=() => {
@@ -98,34 +87,66 @@ const AddTestButton =()=>{
     setIsOpen(false);
   }
 
-  // jsx--------------------------------------------------------------------------
+  // jsx------------------------------------------------------------
   return (
     <div>
       <TextButton text="テスト作成" type='button' onClick={()=>setIsOpen(true)} className="py-2 px-2 font-bold"/>
+      <AddTestModal isOpen={isOpen} onClose={closeModal}/>
 
-      {/* モーダルウィンドウ------------------------------------------------ */}
-      <Dialog open={isOpen} as="div" className="relative z-10 focus:outline-none" onClose={()=>{closeModal();}}>
-        <div className='fixed inset-0 z-40 bg-[rgb(0_0_0/0.6)] flex justify-center'>
-          <div className="w-5/6 my-5 p-8 bg-white rounded-lg overflow-auto">
-            <DialogPanel>
-              <div className='flex flex-row justify-between place-items-center pb-2 mb-4 border-b-4'>
-                <TestTypeSelector/>
-                <TextButton text='作成' type='submit' className="py-2 px-4 font-bold" form="setup"/>
-              </div>
-              <SetupForm testType={testType} edit={false} id="setup"/>
-            </DialogPanel>
-          </div>
-        </div>
-      </Dialog>
     </div>
   );
 };
 
 
+interface TestTypeSelectorProps {
+  testType: tauriTestType;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+}
+const TestTypeSelector: FC<TestTypeSelectorProps> =({testType, onChange})=> {
+  return (
+    <div className="text-lg">
+      <select value={testType} onChange={onChange}>
+        <option key="Mos" value="Mos" >平均オピニオン評価 (MOS)</option>
+        <option key="Thurstone" value="Thurstone">一対比較法 (サーストン法)</option>
+      </select>
+    </div>
+  )
+}
+
+interface AddTestModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+const AddTestModal: FC<AddTestModalProps> = ({isOpen, onClose}) => {
+  const [testType, setTestType] = useState<tauriTestType>("Mos");
+
+  const testTypeSelectorOnChange = (e: React.ChangeEvent<HTMLSelectElement>) =>{
+    setTestType(e.target.value as tauriTestType)
+  };
+
+  return (
+    <Dialog open={isOpen} as="div" className="relative z-10 focus:outline-none" onClose={onClose}>
+      <div className='fixed inset-0 z-40 bg-[rgb(0_0_0/0.6)] flex justify-center'>
+        <div className="w-5/6 my-5 p-8 bg-white rounded-lg overflow-auto">
+          <DialogPanel>
+            <div className='flex flex-row justify-between place-items-center pb-2 mb-4 border-b-4'>
+              <TestTypeSelector testType={testType} onChange={testTypeSelectorOnChange}/>
+              <TextButton text='作成' type='submit' className="py-2 px-4 font-bold" form="setup"/>
+            </div>
+            <SetupForm testType={testType} edit={false} id="setup"/>
+          </DialogPanel>
+        </div>
+      </div>
+    </Dialog>
+  )
+};
+
+
+
+//=======================================================================
 interface SettingButtonProps {
   info: {[key: string]: any};
 }
-//=======================================================================
 const SettingButton: FC<SettingButtonProps> =({info})=>{
   const [isOpen, setIsOpen] = useState<boolean>(false);
 

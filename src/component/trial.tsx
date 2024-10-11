@@ -6,7 +6,7 @@ import { invoke } from "@tauri-apps/api/tauri";
 import "../App.css";
 import { TrialContext, TrialProvider, TrialStatus } from "./context.tsx";
 import { TextButton } from "./button.tsx";
-import { Answer } from './answer.tsx';
+import { Answer } from './answer/answer.tsx';
 import { testTypeToString, tauriStartTest } from '../tauri_commands.ts';
 import { MarkdownRenderer } from './markdown.tsx';
 

@@ -14,6 +14,7 @@
     "@hookform/resolvers": "^3.9.0",
     "@tauri-apps/api": "^1",
     "@tauri-apps/plugin-log": "^2.0.0-rc.0",
+    "jstat": "^1.9.6",
     "latest": "^0.2.0",
     "mathjs": "^13.1.1",
     "path-browserify": "^1.0.1",
