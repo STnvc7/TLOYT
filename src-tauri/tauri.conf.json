@@ -11,26 +11,37 @@
   },
   "tauri": {
     "allowlist": {
-      "all": false,
+      "all": true,
       "shell": {
         "all": false,
         "open": true
+      },
+      "protocol": {
+        "all": true,
+        "asset": true,
+        "assetScope": [ "**" ]
+      },
+      "fs": {
+        "all": true,
+        "scope": [
+            "$APPDATA/**"
+          ]
       }
     },
     "windows": [
       {
         "title": "tloyt",
         "width": 800,
-        "height": 600
+        "height": 500
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; media-src 'self' asset: https://asset.localhost;"
     },
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.tauri.dev",
+      "identifier": "TLOYT",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",

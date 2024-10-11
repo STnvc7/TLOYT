@@ -1,8 +1,8 @@
 pub mod mos;
-pub mod ab_thurstone;
+pub mod thurstone;
 
 use crate::constants::AVAILABLE_AUDIO_FILE_EXTENTION;
-use crate::test_manager::mos::MOSManager;
+use crate::error::ApplicationError;
 use crate::test_trial::TrialStatus;
 
 use anyhow::{anyhow, Result};
@@ -10,30 +10,35 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-/*===================================================
-*/
+// 各テスト手法の共通の振る舞いを規定するトレイト====================================
 #[allow(dead_code)]
-pub trait TestManager {
+pub trait TestManager: Send + Sync {
     fn get_name(&self) -> String;
-    fn delete(&self);
-    fn launch_trial(&mut self, participant_name: String) -> Result<()>;
-    fn get_audio(&mut self) -> Result<PathBuf>;
-    fn set_score(&mut self, score: Vec<isize>) -> Result<TrialStatus>;
-    fn close_trial(&mut self) -> Result<()>;
-
-    //====================================================================
+    //----------------------------------------------------------------
+    fn launch_trial(&mut self, examinee: String) -> Result<()>;
+    fn close_trial(&mut self, examinee: String) -> Result<()>;
+    fn delete_trial(&mut self, examinee: String) -> Result<()>;
+    fn launch_preview(&mut self) -> Result<()>;
+    fn close_preview(&mut self) -> Result<()>;
+    fn edit(&mut self, json_string: String) -> Result<()>;
+    fn get_audio(&mut self) -> Result<Vec<PathBuf>>;
+    fn set_score(&mut self, score: Vec<String>) -> Result<TrialStatus>;
+    //----------------------------------------------------------------
     fn copy_categories(&self) -> Result<()>;
     fn save_setting(&self) -> Result<()>;
+    //----------------------------------------------------------------
+    fn get_setting(&self) -> Result<String>;
 }
 
-//===================================================
+//実験参加者の状態を表す列挙型================================================
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ParticipantStatus {
-    Yet,
-    Done,
+    Yet,  //未受験
+    Done, //受験済み
 }
 
-//==================================================
+// テストの比較対象のカテゴリを操作する構造体========================================
+// 注意：カテゴリ内の音声ファイルの名前はカテゴリ間で同じものとする必要あり．
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Categories {
     names: Vec<String>,
@@ -48,28 +53,36 @@ impl Categories {
             filenames: filenames,
         }
     }
+
+    // 構造体を構成------------------------------------------------------------
     pub fn setup(categories: Vec<(String, PathBuf)>) -> Result<Categories> {
         let mut names: Vec<String> = Vec::new();
         let mut original_paths: Vec<PathBuf> = Vec::new();
         let mut filenames: Vec<String> = Vec::new();
 
-        for category in categories {
-            names.push(category.0.replace(" ", "_"));
+        for (i, category) in categories.iter().enumerate() {
+            names.push(category.0.replace(" ", "_")); // カテゴリ名の空白をアンダーバーに置換
             original_paths.push(category.1.clone());
 
-            let _filenames = Categories::glob_audio_filenames(category.1)?;
-            if filenames.len() == 0 {
+            let _filenames = Categories::glob_audio_filenames(category.1.clone())?; // 音声ファイルを取得
+                                                                                    // ループの最初の時はシンプルに格納
+            if i == 0 {
                 filenames = _filenames;
                 continue;
             }
+
+            // カテゴリ内の音声ファイルのリストが異なる場合はエラー
             if filenames != _filenames {
-                return Err(anyhow!("The names of the audio files are not the same"));
+                return Err(anyhow!(ApplicationError::InvalidCategoriesError(
+                    "each category has different filename".to_string()
+                )));
             }
         }
 
         Ok(Categories::new(names, original_paths, filenames))
     }
 
+    // 有効な拡張子をもつ音声ファイルを取得---------------------------------------------
     fn glob_audio_filenames(path: PathBuf) -> Result<Vec<String>> {
         let mut filenames: Vec<String> = Vec::new();
         let entries = fs::read_dir(&path)?;
@@ -96,9 +109,6 @@ impl Categories {
 
     pub fn get_names(&self) -> Vec<String> {
         self.names.clone()
-    }
-    pub fn get_original_paths(&self) -> Vec<PathBuf> {
-        self.original_paths.clone()
     }
     pub fn get_audio_filenames(&self) -> Vec<String> {
         self.filenames.clone()

@@ -4,7 +4,7 @@ use crate::constants::{
 };
 use crate::error::ApplicationError;
 use crate::test_manager::{Categories, ParticipantStatus, TestManager};
-use crate::test_trial::{mos::MosTrial, TestTrial, TrialStatus};
+use crate::test_trial::{thurstone::ThurstoneTrial, TestTrial, TrialStatus};
 
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
@@ -17,8 +17,9 @@ use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_json;
 
-/*テストのセットアップのための情報を保持する構造体==========================================
-フロントエンドとの情報共有をこの構造体をシリアライズした文字列を通しておこなう
+/*===================================================
+TestManagerをセットアップするための構造体
+フロントエンドでこの構造体と同じ構造のオブジェクトを生成し，Rust側に渡すことで新しいテストを生成する
 */
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct SetupInfo {
@@ -29,12 +30,11 @@ struct SetupInfo {
     categories: Vec<(String, PathBuf)>,
 
     time_limit: usize,
-    num_repeat: usize,
 }
 
-// Mosテストのテストマネージャ================================================
+//サーストン法を用いた一対比較法のテストマネージャ========================
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MosManager {
+pub struct ThurstoneManager {
     manager_data_root: PathBuf,
     name: String,
     test_type: TestType,
@@ -45,12 +45,11 @@ pub struct MosManager {
     categories: Categories,
     participants: HashMap<String, ParticipantStatus>,
     time_limit: usize,
-    num_repeat: usize,
-    active_trial: Option<MosTrial>,
+    active_trial: Option<ThurstoneTrial>,
 }
 
 #[allow(dead_code)]
-impl TestManager for MosManager {
+impl TestManager for ThurstoneManager {
     fn get_name(&self) -> String {
         self.name.clone()
     }
@@ -71,11 +70,10 @@ impl TestManager for MosManager {
             return Err(anyhow!(ApplicationError::AlreadyTakenTrialError(examinee)));
         }
 
-        let new_trial = MosTrial::generate(
+        let new_trial = ThurstoneTrial::generate(
             self.manager_data_root.clone(),
             examinee,
             self.categories.clone(),
-            self.num_repeat,
         )?;
 
         self.active_trial = Some(new_trial);
@@ -89,7 +87,7 @@ impl TestManager for MosManager {
             trial.save_result()?;
         }
 
-        *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Done;
+        *self.participants.get_mut(&examinee).unwrap() = ParticipantStatus::Done; // 受験者のステータスを更新
         self.active_trial = None;
         self.save_setting()?;
         info!(
@@ -124,11 +122,10 @@ impl TestManager for MosManager {
     // テストのプレビューを開始-------------------------------------------------
     fn launch_preview(&mut self) -> Result<()> {
         // 受験者の名前を設定せずにトライアルを生成
-        let preview_trial = MosTrial::generate(
+        let preview_trial = ThurstoneTrial::generate(
             self.manager_data_root.clone(),
             String::new(),
             self.categories.clone(),
-            self.num_repeat,
         )?;
 
         self.active_trial = Some(preview_trial);
@@ -154,7 +151,6 @@ impl TestManager for MosManager {
         self.categories = Categories::setup(info.categories)?;
         self.edit_participants(info.participants);
         self.time_limit = info.time_limit;
-        self.num_repeat = info.num_repeat;
         self.save_setting()?;
         Ok(())
     }
@@ -192,7 +188,7 @@ impl TestManager for MosManager {
     fn save_setting(&self) -> Result<()> {
         let json_path = self.manager_data_root.join(TEST_MANAGER_SETTING_FILENAME);
 
-        let json_string = serde_json::to_string_pretty(&self)?;
+        let json_string = serde_json::to_string_pretty(&self)?; // 構造体をシリアライズ
         let mut file = File::create(&json_path)?;
         file.write_all(json_string.as_bytes())?;
         info!(
@@ -202,15 +198,16 @@ impl TestManager for MosManager {
         Ok(())
     }
 
+    // マネージャの設定をシリアライズして返す-------------------------------------------
     fn get_setting(&self) -> Result<String> {
         let json_string = serde_json::to_string_pretty(&self)?;
         Ok(json_string)
     }
 }
 
-impl MosManager {
+impl ThurstoneManager {
     // jsonファイルをデシリアライズして構造体を生成------------------------------------------
-    pub fn from_json(path_to_test_config: PathBuf) -> Result<MosManager> {
+    pub fn from_json(path_to_test_config: PathBuf) -> Result<ThurstoneManager> {
         // ファイルがなければエラー
         if path_to_test_config.exists() == false {
             return Err(anyhow!(ApplicationError::TestDataNotFoundError(
@@ -218,29 +215,29 @@ impl MosManager {
             )));
         }
         let json_string = fs::read_to_string(path_to_test_config)?;
-        let this_test: MosManager = serde_json::from_str(&json_string)?;
+        let this_test: ThurstoneManager = serde_json::from_str(&json_string)?;
         return Ok(this_test);
     }
 
     // フロントエンドから送られたセットアップ情報から構造体を構成------------------------------
-    pub fn setup(app_data_root: PathBuf, json_string: String) -> Result<MosManager> {
+    pub fn setup(app_data_root: PathBuf, json_string: String) -> Result<ThurstoneManager> {
         let info: SetupInfo = serde_json::from_str(&json_string)?;
+        let name = info.name.replace(" ", "_");
         let manager_data_root =
-            MosManager::get_manager_data_root(app_data_root, info.name.clone())?;
+            ThurstoneManager::get_manager_data_root(app_data_root, name.clone())?;
         let categories = Categories::setup(info.categories)?;
 
-        return Ok(MosManager {
+        return Ok(ThurstoneManager {
             manager_data_root: manager_data_root,
-            name: info.name,
-            test_type: TestType::Mos,
+            name: name,
+            test_type: TestType::Thurstone,
             author: info.author,
             created_date: Local::now().date_naive(),
             modified_date: Local::now().date_naive(),
             description: info.description,
             categories: categories,
-            participants: MosManager::setup_participants(info.participants),
+            participants: ThurstoneManager::setup_participants(info.participants),
             time_limit: info.time_limit,
-            num_repeat: info.num_repeat,
             active_trial: None,
         });
     }
